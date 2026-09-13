@@ -1,0 +1,15 @@
+name: Feature request
+description: Something Plugin Lab should check or capture
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: The problem
+      description: What you're trying to do while building or reviewing a plugin
+    validations:
+      required: true
+  - type: textarea
+    id: idea
+    attributes:
+      label: The idea

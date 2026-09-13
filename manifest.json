@@ -1,0 +1,10 @@
+{
+  "id": "plugin-lab",
+  "name": "Plugin Lab",
+  "version": "1.0.0",
+  "minAppVersion": "1.4.0",
+  "description": "Pre-flight review against the official linter and the community review rules, an inventory of commands and settings, and UI captures under every installed theme.",
+  "author": "Real-Fruit-Snacks",
+  "authorUrl": "https://github.com/Real-Fruit-Snacks",
+  "isDesktopOnly": true
+}

@@ -1,0 +1,36 @@
+name: Bug report
+description: Something in Plugin Lab doesn't work as described
+labels: [bug]
+body:
+  - type: input
+    id: versions
+    attributes:
+      label: Versions
+      placeholder: Obsidian 1.9.x · Plugin Lab 1.0.0 · Linux
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options: [Review (a rule is wrong or missing), Inventory, UI matrix / captures, Panel, Settings, Other]
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: For a wrong rule, paste the review line and the code it points at.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected, and what happened instead
+    validations:
+      required: true
+  - type: textarea
+    id: console
+    attributes:
+      label: Developer console output
+      render: text

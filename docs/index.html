@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Plugin Lab — a pre-flight review and UI lab for Obsidian plugins</title>
+<meta name="description" content="Plugin Lab reviews an installed plugin the way the community review and the official linter will, inventories its commands and settings, and captures its UI under every installed theme in dark and light.">
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+<meta property="og:title" content="Plugin Lab for Obsidian">
+<meta property="og:description" content="Ship a plugin that passes review the first time. Pre-flight review, inventory, and UI under every theme.">
+<meta property="og:image" content="https://real-fruit-snacks.github.io/obsidian-plugin-lab/assets/screenshot.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/rfs.css">
+<style>
+  :root{ --accent:#3DBE8B; --accent-2:#7CD4FF; }
+  .shots-3 { display:grid; grid-template-columns: 1fr 1fr 1fr; gap:12px; align-items:start; }
+  .shots-3 figure { margin:0; background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:10px; }
+  .shots-3 img { border-radius:8px; border:1px solid var(--line); }
+  .shots-3 figcaption { color:var(--text-3); font-size:13px; padding:10px 4px 2px; }
+  .cmd { display:grid; grid-template-columns: 1fr; gap:8px; }
+  .cmd div { display:flex; gap:14px; align-items:baseline; padding:10px 14px; background:var(--panel); border:1px solid var(--line); border-radius:var(--r-s); }
+  .cmd code { white-space:nowrap; }
+  .cmd span { color:var(--text-2); font-size:14.5px; }
+  .verdicts { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin: 0 0 24px; }
+  .verdict { padding:16px 18px; border-radius:12px; border:1px solid var(--line); background:var(--panel); }
+  .verdict b { display:block; margin-bottom:6px; }
+  .verdict.pass b { color:#3DBE8B; } .verdict.lint b { color:#F2B65C; }
+  .verdict p { margin:0; color:var(--text-2); font-size:14.5px; }
+  @media (max-width:860px){ .shots-3, .verdicts { grid-template-columns:1fr; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="site-header">
+    <a class="owner" href="https://github.com/Real-Fruit-Snacks"><i></i>Real-Fruit-Snacks</a>
+    <span class="crumb">/</span><span class="proj">Plugin Lab</span>
+    <nav>
+      <a href="#features">Features</a>
+      <a href="#review">The review</a>
+      <a href="#install">Install</a>
+      <a href="#changelog">Changelog</a>
+      <a class="gh" href="https://github.com/Real-Fruit-Snacks/obsidian-plugin-lab">GitHub</a>
+    </nav>
+  </header>
+
+  <div class="hero">
+    <div class="pill"><b>Plugin</b> for plugin authors · desktop</div>
+    <h1>Ship a plugin that passes review the first time.</h1>
+    <p class="lede">Plugin Lab reads an installed plugin and tells you what the community review will say and what the official linter would flag — rule id, file, line. Then it inventories the plugin and captures its UI under every theme you have.</p>
+    <div class="actions">
+      <a class="btn primary" href="#install">Install Plugin Lab</a>
+      <a class="btn secondary" href="https://github.com/Real-Fruit-Snacks/obsidian-plugin-lab">View source</a>
+    </div>
+    <div class="frame"><img src="assets/hero.png" alt="Plugin Lab: the panel reviewing a plugin, a summary of every installed plugin, and a dialog captured under a theme in both schemes"></div>
+  </div>
+
+  <section id="features">
+    <h2>Three jobs, one panel</h2>
+    <p class="sub">The things a plugin author does by hand before a release — or finds out about after.</p>
+    <div class="grid">
+      <div class="f"><div class="ic">✓</div><h3>Pre-flight review</h3><p>Two verdicts, kept apart: would the community review pass it, and what would the official linter say. 35 of the linter's 40 rules mirrored, with its own severities and its brand and acronym lists.</p></div>
+      <div class="f"><div class="ic">#</div><h3>Rule id on every line</h3><p>Each finding names the rule, links its doc, and points at the file and line. No guessing what a reviewer meant.</p></div>
+      <div class="f"><div class="ic">≡</div><h3>Inventory</h3><p>Commands with hotkeys and what they do, settings with types and descriptions, ribbons, views, processors, URI handlers, dialogs, stored keys — and a README snippet.</p></div>
+      <div class="f"><div class="ic">▦</div><h3>UI under every theme</h3><p>Settings tab, views, ribbon icons and commands captured under every installed theme × dark and light, tiled one theme per row. Modals, menus, popovers and notices are framed tightly.</p></div>
+      <div class="f"><div class="ic">⚑</div><h3>Knows what a command does</h3><p>Reads each command from the code: opens a dialog, opens a view, needs an editor, writes files, uses the network. Safe ones are pre-ticked for capture; the rest are labelled.</p></div>
+      <div class="f"><div class="ic">∑</div><h3>Every plugin at once</h3><p>Review every installed plugin into one summary, worst first, each row linking to its full note. Useful for your dependencies too.</p></div>
+    </div>
+  </section>
+
+  <section id="review" class="left">
+    <h2>Two verdicts, on purpose</h2>
+    <p class="sub">A plugin can be listed and still fail the linter. Plugin Lab never conflates the two.</p>
+    <div class="verdicts">
+      <div class="verdict pass"><b>Community review: would pass</b><p>The gate for the directory. Only rules verified to block a listing count here: the manifest words the review rejects, a malformed version, obfuscation, analytics SDKs. Calibrated against a dozen listed plugins until it matched their real scorecards.</p></div>
+      <div class="verdict lint"><b>Official linter: 2 errors · 5 warnings</b><p><a href="https://github.com/obsidianmd/eslint-plugin">eslint-plugin-obsidianmd</a>, the guideline linter reviewers point people to. Errors are its enabled rules, warnings its warn-level rules. Not enforced by the directory — but it's what "please follow the guidelines" means.</p></div>
+    </div>
+    <div class="shots-3">
+      <figure><img src="assets/panel.png" alt="The panel: live pre-flight with both verdicts, then commands and surfaces"><figcaption>The panel — live pre-flight, re-checked on demand.</figcaption></figure>
+      <figure><img src="assets/summary.png" alt="A summary note reviewing every installed plugin"><figcaption>Every installed plugin, worst first, each linked to its note.</figcaption></figure>
+      <figure><img src="assets/matrix-modal.png" alt="The capture dialog"><figcaption>The capture dialog — themes, schemes, surfaces, commands.</figcaption></figure>
+    </div>
+    <div class="frame" style="margin-top:24px"><img src="assets/sheet-quick-capture.png" alt="A contact sheet: a plugin's dialog under one theme, dark and light"></div>
+  </section>
+
+  <section id="workflow">
+    <div class="two">
+      <div>
+        <h2>Workflow</h2>
+        <p class="sub">Open the panel, pick the plugin you're working on, keep it open.</p>
+        <ol class="steps">
+          <li><b>Pre-flight</b> Read it as you edit; re-check after a reload. Write the full note when it's clean.</li>
+          <li><b>Inventory</b> Before the README. Paste the snippet.</li>
+          <li><b>Matrix</b> Before the screenshots: settings tab, views and the safe commands under the themes your users have.</li>
+          <li><b>Review all</b> Now and then, to see which of your own dependencies would fail today's review.</li>
+        </ol>
+        <div class="callout"><b>It reads code as text.</b> No type-checker, so five linter rules are out of reach and the rest are close approximations. When a rule is wrong, the issue template asks for the line and the code it points at.</div>
+      </div>
+      <div class="cmd">
+        <div><code>Open panel</code></div>
+        <div><code>Review a plugin</code><span>pre-flight for the community review</span></div>
+        <div><code>Review every installed plugin</code><span>summary note + one note each</span></div>
+        <div><code>Write a plugin inventory</code><span>commands, settings, surfaces</span></div>
+        <div><code>Capture a plugin's UI under every theme</code></div>
+        <div><code>Capture one screenshot now</code></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="install">
+    <div class="two">
+      <div>
+        <h2>Install</h2>
+        <p class="sub">From the community list, or three files by hand.</p>
+        <ol class="steps">
+          <li><b>Community plugins</b> Settings → Community plugins → Browse → search "Plugin Lab".</li>
+          <li><b>Manual</b> Download <code>main.js</code>, <code>styles.css</code> and <code>manifest.json</code> from the <a href="https://github.com/Real-Fruit-Snacks/obsidian-plugin-lab/releases/latest">latest release</a> into <code>.obsidian/plugins/plugin-lab/</code>, then enable it.</li>
+        </ol>
+        <div class="callout"><b>Desktop only.</b> Captures use Electron's <code>capturePage</code>. No network requests; everything stays in your vault.</div>
+      </div>
+<pre><code>.obsidian/
+  plugins/
+    plugin-lab/
+      main.js
+      styles.css
+      manifest.json
+
+Plugin Lab/                 in your vault
+  Thoughtbin/
+    Review 2026-09-12 …md
+    Inventory 2026-09-12 …md
+    2026-09-12 211209/
+      Matrix.md
+      sheets/
+  Summary 2026-09-12 …md</code></pre>
+    </div>
+  </section>
+
+  <section id="changelog" class="left">
+    <h2>Changelog</h2>
+    <p class="sub">Bare version numbers as tags; releases are built by the workflow.</p>
+    <div class="release">
+      <div class="v">1.0.0<small>2026-09-13</small></div>
+      <ul>
+        <li>Pre-flight review with separate community-review and linter verdicts; 35 official rules mirrored.</li>
+        <li>Review every installed plugin into a linked summary.</li>
+        <li>Inventory of commands, settings and surfaces, with a README snippet.</li>
+        <li>UI captured under every installed theme × dark/light, including dialogs, menus and notices opened by commands.</li>
+        <li>Right-sidebar panel with live pre-flight.</li>
+      </ul>
+    </div>
+  </section>
+
+  <section id="projects">
+    <h2>More from Real-Fruit-Snacks</h2>
+    <p class="sub">Tools for people who make things for Obsidian, and the themes made with them.</p>
+    <div class="proj">
+      <a href="https://real-fruit-snacks.github.io/obsidian-Thoughtbin/"><i style="background:#7C9CFF"></i><b>Thoughtbin</b><span>Obsidian plugin — a private timeline for quick thoughts</span></a>
+      <a href="https://real-fruit-snacks.github.io/obsidian-theme-lab/"><i style="background:#E0554A"></i><b>Theme Lab</b><span>Obsidian plugin — build themes from inside Obsidian</span></a>
+      <a href="#" aria-current="page"><i style="background:#3DBE8B"></i><b>Plugin Lab</b><span>Obsidian plugin — ship a plugin that passes review</span></a>
+      <a href="https://real-fruit-snacks.github.io/obsidian-glow/"><i style="background:#B48CFF"></i><b>Glow</b><span>Obsidian theme — calm dark with a little light</span></a>
+      <a href="https://real-fruit-snacks.github.io/obsidian-outrun/"><i style="background:#FF3FA4"></i><b>Outrun</b><span>Obsidian theme — 1986 never ended</span></a>
+      <a href="https://real-fruit-snacks.github.io/obsidian-dossier/"><i style="background:#CBAA6C"></i><b>Dossier</b><span>Obsidian theme — every note is a case file</span></a>
+      <a href="https://real-fruit-snacks.github.io/obsidian-comic/"><i style="background:#FFD23F"></i><b>Comic</b><span>Obsidian theme — your notes, printed in colour</span></a>
+      <a href="https://real-fruit-snacks.github.io/obsidian-grimoire/"><i style="background:#8A6EFF"></i><b>Grimoire</b><span>Obsidian theme — every note is a tarot card</span></a>
+    </div>
+  </section>
+
+  <footer class="site-footer">
+    <span>Plugin Lab by <a href="https://github.com/Real-Fruit-Snacks">Real-Fruit-Snacks</a> · MIT</span>
+    <span>Rules mirrored from eslint-plugin-obsidianmd, MIT © Obsidian</span>
+  </footer>
+</div>
+</body>
+</html>

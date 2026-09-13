@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Discussions
+    url: https://github.com/Real-Fruit-Snacks/obsidian-plugin-lab/discussions
+    about: Questions, ideas, and rules you think are wrong
