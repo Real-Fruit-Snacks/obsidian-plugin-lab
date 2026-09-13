@@ -1,14 +1,12 @@
 # Dev Lab
 
-*Formerly "Plugin Lab" — the directory doesn't allow that word in a name. The plugin id is still `plugin-lab`.*
-
 **Ship a plugin that passes review the first time.** Dev Lab reads an installed plugin's `main.js`, `styles.css` and `manifest.json` and tells you what the community review will say and what the official linter would flag — with the rule id, the file and the line. Then it inventories the plugin's commands, settings and surfaces, and captures its UI under every theme you have installed, in dark and light.
 
 [![Site](https://img.shields.io/badge/site-real--fruit--snacks.github.io-3DBE8B)](https://real-fruit-snacks.github.io/obsidian-plugin-lab/)
 [![Release](https://img.shields.io/github/v/release/Real-Fruit-Snacks/obsidian-plugin-lab?color=3DBE8B)](https://github.com/Real-Fruit-Snacks/obsidian-plugin-lab/releases/latest)
 [![License](https://img.shields.io/badge/license-MIT-lightgrey)](LICENSE)
 
-![Dev Lab: the panel reviewing Thoughtbin, a summary of every installed plugin, and a modal captured under a theme in both schemes](docs/assets/hero.png)
+![Dev Lab: the panel reviewing Thoughtbin, its inventory note, and a modal captured under a theme in both schemes](docs/assets/hero.png)
 
 It's the twin of [Theme Lab](https://github.com/Real-Fruit-Snacks/obsidian-theme-lab): the same panel, the same capture engine, aimed at plugin authors instead of theme authors. It was built after a first release failed review over a word in the manifest description.
 
@@ -32,6 +30,8 @@ The engine masks comments, regex literals and string contents before scanning, s
 ### Inventory
 
 One note: every command with its current hotkey and what it does (read from the code: opens a dialog, opens a view, needs an editor, writes files, uses the network), every setting in source order with its type and description, headings, ribbon icons, views, code-block processors, URI handlers, menu hooks, dialog classes, the keys stored in `data.json`, and a README-ready snippet.
+
+![An inventory note: Thoughtbin's commands with what each one does, then its settings](docs/assets/inventory.png)
 
 ### UI under every theme
 
@@ -87,6 +87,10 @@ It reads code as text, so it's an approximation. When it's wrong about a rule, t
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md). No build step: `main.js`, `styles.css`, `manifest.json`. Every review rule has a case in the test harness.
+
+## Notes
+
+Formerly "Plugin Lab" — the directory doesn't allow that word in a plugin name. The plugin id is still `plugin-lab`, so existing installs and hotkeys keep working.
 
 ## License
 
