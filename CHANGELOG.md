@@ -2,6 +2,12 @@
 
 All notable changes to Dev Lab are listed here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and versions follow [Semantic Versioning](https://semver.org/).
 
+## [1.0.2] - 2026-09-13
+
+### Fixed
+- `no-static-styles-assignment` no longer flags `setCssProps` / `setCssStyles` calls whose values are computed — that is the linter's recommended form. Only a literal with nothing but static values is reported, matching the official rule.
+- Test harness covers the static/dynamic distinction.
+
 ## [1.0.1] - 2026-09-13
 
 ### Changed
@@ -17,5 +23,6 @@ All notable changes to Dev Lab are listed here. The format follows [Keep a Chang
 - **UI under every theme**: settings tab, views, ribbon icons, commands (pre-ticked when the code shows they open something without writing) and the current scene, captured under every installed theme × dark/light, tiled one theme per row; theme and scheme restored afterwards.
 - **Panel** with the target plugin, live pre-flight, commands with run buttons, surface chips, and the notes and runs list.
 
+[1.0.2]: https://github.com/Real-Fruit-Snacks/obsidian-plugin-lab/releases/tag/1.0.2
 [1.0.1]: https://github.com/Real-Fruit-Snacks/obsidian-plugin-lab/releases/tag/1.0.1
 [1.0.0]: https://github.com/Real-Fruit-Snacks/obsidian-plugin-lab/releases/tag/1.0.0

@@ -49,6 +49,15 @@ function extractStrings(js, callName) {
   while ((m = re.exec(js))) out.push({ text: m[2], index: m.index });
   return out;
 }
+function objectLiteralIsStatic(text, open) {
+  // text is masked code (string contents blanked, quotes kept); open is the index of '{'
+  let depth = 0, i = open; for (; i < text.length; i++) { const c = text[i]; if (c === '{' || c === '(' || c === '[') depth++; else if (c === '}' || c === ')' || c === ']') { depth--; if (depth === 0) break; } }
+  const body = text.slice(open + 1, i); if (!body.trim()) return false;
+  const values = []; let cur = '', d = 0, seenColon = false;
+  for (const c of body) { if (c === '{' || c === '(' || c === '[') d++; else if (c === '}' || c === ')' || c === ']') d--; if (d === 0 && c === ',') { values.push(cur); cur = ''; seenColon = false; continue; } if (d === 0 && c === ':' && !seenColon) { seenColon = true; cur = ''; continue; } if (seenColon) cur += c; }
+  values.push(cur);
+  return values.every((v) => /^\s*(['"`]\s*['"`]|-?\d+(\.\d+)?)\s*$/.test(v));
+}
 function findAll(text, re) { const out = []; let m; const r = new RegExp(re.source, re.flags.includes('g') ? re.flags : re.flags + 'g'); while ((m = r.exec(text))) { out.push({ index: m.index, match: m[0], groups: m.slice(1) }); if (m[0].length === 0) r.lastIndex++; } return out; }
 
 // ---------- review engine ----------
@@ -216,7 +225,8 @@ function reviewPlugin(manifestFromApp, files) {
     const obf = findAll(bare, /_0x[0-9a-f]{4,}/i); if (obf.length > 5) a(L.error, 'Identifiers like `_0x1a2b` suggest obfuscated code, which is not allowed.', Object.assign({ rule: 'review/obfuscation' }, first(obf))); else a(L.pass, 'No obfuscation detected.', { rule: 'review/obfuscation' });
     const inner = findAll(bare, /\.(innerHTML|outerHTML)\s*=|insertAdjacentHTML\s*\(/); if (inner.length) a(L.warning, `innerHTML/outerHTML/insertAdjacentHTML assignment (${inner.length}). Build DOM with createEl/createDiv/createSpan.`, Object.assign({ rule: 'review/behavior', help: 'Plugin guidelines: avoid innerHTML. Reviewers have rejected plugins for it.' }, first(inner)));
     const forb = findAll(code, /(createEl|createElement)\(\s*['"](style|link)['"]/); if (forb.length) a(L.error, `Creating and attaching "${forb[0].match.match(/['"](\w+)['"]/)[1]}" elements is not allowed. For CSS use styles.css.`, Object.assign({ rule: 'obsidianmd/no-forbidden-elements' }, first(forb)));
-    const styl = findAll(bare, /\.style\.[a-zA-Z]+\s*=[^=]|\.style\.setProperty\(|setAttribute\(\s*['"]style['"]|setCssProps\(\s*\{|setCssStyles\(\s*\{/); if (styl.length) a(L.error, `Sets styles directly on elements (${styl.length}×); use CSS classes in styles.css.`, Object.assign({ rule: 'obsidianmd/no-static-styles-assignment' }, first(styl)));
+    // setCssProps/setCssStyles are the linter's recommended form for dynamic values; only a literal with nothing but static values is flagged
+    const styl = findAll(bare, /\.style\.[a-zA-Z]+\s*=[^=]|\.style\.setProperty\(|setAttribute\(\s*['"]style['"]/).concat(findAll(bare, /setCss(?:Props|Styles)\(\s*\{/).filter((m) => objectLiteralIsStatic(bare, m.index + m.match.length - 1))); styl.sort((x, y) => x.index - y.index); if (styl.length) a(L.error, `Sets styles directly on elements (${styl.length}×); use CSS classes in styles.css.`, Object.assign({ rule: 'obsidianmd/no-static-styles-assignment' }, first(styl)));
     const nav = findAll(bare, /\bnavigator\.(platform|userAgent|appVersion|vendor)\b/); if (nav.length) a(L.error, 'Uses navigator for OS detection; use `Platform` from the Obsidian API.', Object.assign({ rule: 'obsidianmd/platform' }, first(nav)));
     const sample = [...findAll(code, /console\.log\(\s*['"]setInterval['"]\s*\)/), ...findAll(code, /console\.log\(\s*['"]click['"]/)]; if (sample.length) a(L.error, 'Sample code from the plugin template is still present (the demo registerInterval / registerDomEvent).', Object.assign({ rule: 'obsidianmd/no-sample-code' }, first(sample)));
     const sn = findAll(bare, new RegExp('\\b(class|function)\\s+(' + SAMPLE_NAMES.join('|') + ')\\b|\\b(' + SAMPLE_NAMES.join('|') + ')\\s*[:=]')); if (sn.length) a(L.error, 'Rename the sample classes (MyPlugin, SampleSettingTab, SampleModal, MyPluginSettings, mySetting).', Object.assign({ rule: 'obsidianmd/sample-names' }, first(sn)));
