@@ -1,4 +1,4 @@
-# Contributing to Plugin Lab
+# Contributing to Dev Lab
 
 Thanks for taking the time. Bug reports, feature ideas and pull requests are all welcome.
 
@@ -6,11 +6,11 @@ Thanks for taking the time. Bug reports, feature ideas and pull requests are all
 
 Open an [issue](https://github.com/Real-Fruit-Snacks/obsidian-plugin-lab/issues/new/choose) using the bug template. Please include:
 
-- Obsidian version and operating system (Plugin Lab is desktop only)
-- Plugin Lab version (Settings → Community plugins)
+- Obsidian version and operating system (Dev Lab is desktop only)
+- Dev Lab version (Settings → Community plugins)
 - Which plugin was being reviewed or captured, and its version
 - Steps to reproduce, and what you expected instead
-- Anything from the developer console (Ctrl/Cmd+Shift+I) that mentions Plugin Lab
+- Anything from the developer console (Ctrl/Cmd+Shift+I) that mentions Dev Lab
 
 If a review rule is wrong, paste the review line and the code it points at. If a capture came out wrong, attach the contact sheet rather than individual shots.
 

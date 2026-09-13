@@ -1,12 +1,14 @@
-# Plugin Lab
+# Dev Lab
 
-**Ship a plugin that passes review the first time.** Plugin Lab reads an installed plugin's `main.js`, `styles.css` and `manifest.json` and tells you what the community review will say and what the official linter would flag — with the rule id, the file and the line. Then it inventories the plugin's commands, settings and surfaces, and captures its UI under every theme you have installed, in dark and light.
+*Formerly "Plugin Lab" — the directory doesn't allow that word in a name. The plugin id is still `plugin-lab`.*
+
+**Ship a plugin that passes review the first time.** Dev Lab reads an installed plugin's `main.js`, `styles.css` and `manifest.json` and tells you what the community review will say and what the official linter would flag — with the rule id, the file and the line. Then it inventories the plugin's commands, settings and surfaces, and captures its UI under every theme you have installed, in dark and light.
 
 [![Site](https://img.shields.io/badge/site-real--fruit--snacks.github.io-3DBE8B)](https://real-fruit-snacks.github.io/obsidian-plugin-lab/)
 [![Release](https://img.shields.io/github/v/release/Real-Fruit-Snacks/obsidian-plugin-lab?color=3DBE8B)](https://github.com/Real-Fruit-Snacks/obsidian-plugin-lab/releases/latest)
 [![License](https://img.shields.io/badge/license-MIT-lightgrey)](LICENSE)
 
-![Plugin Lab: the panel reviewing Thoughtbin, a summary of every installed plugin, and a modal captured under a theme in both schemes](docs/assets/hero.png)
+![Dev Lab: the panel reviewing Thoughtbin, a summary of every installed plugin, and a modal captured under a theme in both schemes](docs/assets/hero.png)
 
 It's the twin of [Theme Lab](https://github.com/Real-Fruit-Snacks/obsidian-theme-lab): the same panel, the same capture engine, aimed at plugin authors instead of theme authors. It was built after a first release failed review over a word in the manifest description.
 
@@ -17,9 +19,9 @@ It's the twin of [Theme Lab](https://github.com/Real-Fruit-Snacks/obsidian-theme
 Pick a plugin and get a scorecard note with two verdicts that are kept separate on purpose:
 
 - **Community review** — the gate for the directory. Only rules that actually block a listing count here: the manifest words the review rejects, a malformed version, obfuscation, analytics SDKs.
-- **Official linter** — [eslint-plugin-obsidianmd](https://github.com/obsidianmd/eslint-plugin), the guideline linter reviewers point people to. Plugin Lab mirrors 35 of its 40 rules as static checks, with the linter's own severities and its brand and acronym lists for sentence case. The five it can't do need a TypeScript type-checker.
+- **Official linter** — [eslint-plugin-obsidianmd](https://github.com/obsidianmd/eslint-plugin), the guideline linter reviewers point people to. Dev Lab mirrors 35 of its 40 rules as static checks, with the linter's own severities and its brand and acronym lists for sentence case. The five it can't do need a TypeScript type-checker.
 
-Every finding carries its rule id linked to the official rule doc, the file and the line. Sections match the review scorecard: Manifest, Releases, Network, Behavior, CSS, UI text. The note's front matter carries `blocking`, `lint_errors` and `warnings`, so a Dataview table over `Plugin Lab/` is a dashboard.
+Every finding carries its rule id linked to the official rule doc, the file and the line. Sections match the review scorecard: Manifest, Releases, Network, Behavior, CSS, UI text. The note's front matter carries `blocking`, `lint_errors` and `warnings`, so a Dataview table over `Dev Lab/` is a dashboard.
 
 **Review every installed plugin** writes a full note for each plugin and a summary table linking to them — worst first.
 
@@ -45,7 +47,7 @@ A right-sidebar panel with the target plugin, the five tools, a live pre-flight 
 
 ## Install
 
-**Community plugins** — Settings → Community plugins → Browse → search "Plugin Lab".
+**Community plugins** — Settings → Community plugins → Browse → search "Dev Lab".
 
 **Manually** — download `main.js`, `styles.css` and `manifest.json` from the [latest release](https://github.com/Real-Fruit-Snacks/obsidian-plugin-lab/releases/latest) into `<vault>/.obsidian/plugins/plugin-lab/`, then enable it under Community plugins.
 
@@ -53,7 +55,7 @@ Desktop only: captures use Electron's `capturePage`.
 
 ## Use
 
-1. Open the panel (ribbon icon or **Plugin Lab: Open panel**) and pick the plugin you're working on. If its folder is a clone of the repository, the review also checks `versions.json`, `README.md` and `LICENSE`.
+1. Open the panel (ribbon icon or **Dev Lab: Open panel**) and pick the plugin you're working on. If its folder is a clone of the repository, the review also checks `versions.json`, `README.md` and `LICENSE`.
 2. Read the **Pre-flight** section as you edit; **Re-check** after a reload. When it's clean, **Write full note** and keep it with the release.
 3. **Inventory** before you write the README; paste the snippet.
 4. **Matrix** before you publish screenshots: settings tab, views and the safe commands under the themes your users are likely to have.
@@ -62,7 +64,7 @@ Desktop only: captures use Electron's `capturePage`.
 ## Where things go
 
 ```
-Plugin Lab/
+Dev Lab/
   Thoughtbin/
     Review 2026-09-12 213349.md
     Inventory 2026-09-12 211200.md

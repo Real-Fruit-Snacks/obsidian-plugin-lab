@@ -3,11 +3,11 @@
 const obsidian = require('obsidian');
 const { Plugin, PluginSettingTab, Setting, Modal, SuggestModal, Notice, normalizePath, setIcon, TFile } = obsidian;
 
-const VIEW_TYPE = 'plugin-lab-panel';
+const VIEW_TYPE = 'dev-lab-panel';
 
 const DEFAULT_SETTINGS = {
   panelOpen: {},
-  outputFolder: 'Plugin Lab',
+  outputFolder: 'Dev Lab',
   settleMs: 700,
   lastPlugin: '',
   includeDefaultTheme: true,
@@ -70,7 +70,7 @@ function isSkippableString(text) {
   if (/(Ctrl|Cmd|Alt|Shift|Option|⌘|⌥|⌃|⇧)\s*\+\s*[A-Za-z]/.test(text)) return true;
   if (/^v?\d+(?:[._-]\d+)+$/.test(text)) return true;
   if (/^[A-Z0-9_]+$/.test(text)) return true;
-  // Plugin Lab extension: date/time format tokens (moment.js placeholders)
+  // Dev Lab extension: date/time format tokens (moment.js placeholders)
   if (/^[YMDHhmsSaAZzTWwEeQx\s:\-./,\[\]]+$/.test(text) && /[YMDH]/.test(text)) return true;
   return false;
 }
@@ -155,8 +155,8 @@ function reviewPlugin(manifestFromApp, files) {
         const v = String(manifest[k] || ''); const words = ['obsidian', 'plugin'].filter((w) => v.toLowerCase().includes(w));
         if (!words.length) continue;
         const grand = k === 'id';
-        const lvl = words.includes('obsidian') && k !== 'id' ? L.error : grand ? L.warning : L.rec;
-        a(lvl, `The '${k}' property cannot contain '${words.join("' or '")}'.`, { file: 'manifest.json', rule: 'obsidianmd/validate-manifest', blocks: lvl === L.error, help: k === 'id' ? (words.includes('obsidian') ? 'An id cannot change once listed; existing plugins keep theirs. New submissions with "obsidian" in the id are rejected.' : 'The linter warns about "plugin" in ids; the review lists plugins with it.') : k === 'description' && words.includes('obsidian') ? 'The community review rejects "Obsidian" in the description outright.' : 'The linter flags both words; the review has rejected "Obsidian" and tolerates "plugin".' });
+        const lvl = k === 'id' ? L.warning : k === 'name' ? L.error : words.includes('obsidian') ? L.error : L.rec;
+        a(lvl, `The '${k}' property cannot contain '${words.join("' or '")}'.`, { file: 'manifest.json', rule: 'obsidianmd/validate-manifest', blocks: lvl === L.error, help: k === 'id' ? (words.includes('obsidian') ? 'An id cannot change once listed; existing plugins keep theirs. New submissions with "obsidian" in the id are rejected.' : 'The linter warns about "plugin" in ids; the review lists plugins with it.') : k === 'description' && words.includes('obsidian') ? 'The community review rejects "Obsidian" in the description outright.' : (k === 'name' ? 'The review rejects both "Obsidian" and "Plugin" in a name (verified 2026-09).' : 'The linter flags both words; the review has rejected "Obsidian" in a description and tolerates "plugin".') });
       }
       const d = String(manifest.description || '');
       const probs = [];
@@ -487,9 +487,9 @@ class PluginLabPlugin extends Plugin {
   async onload() {
     await this.loadSettings();
     this.addSettingTab(new PluginLabSettingTab(this.app, this));
-    this.statusEl = this.addStatusBarItem(); this.statusEl.addClass('plugin-lab-status'); this.statusEl.hide();
+    this.statusEl = this.addStatusBarItem(); this.statusEl.addClass('dev-lab-status'); this.statusEl.hide();
     this.registerView(VIEW_TYPE, (leaf) => new PluginLabView(leaf, this));
-    this.addRibbonIcon('microscope', 'Open Plugin Lab', () => this.openPanel());
+    this.addRibbonIcon('microscope', 'Open Dev Lab', () => this.openPanel());
     this.addCommand({ id: 'open-panel', name: 'Open panel', callback: () => this.openPanel() });
     this.addCommand({ id: 'review', name: 'Review a plugin (pre-flight for the community review)', callback: () => this.pick('Review', (p) => this.review(p)) });
     this.addCommand({ id: 'inventory', name: 'Write a plugin inventory (commands, settings, surfaces)', callback: () => this.pick('Inventory', (p) => this.inventory(p)) });
@@ -526,30 +526,30 @@ class PluginLabPlugin extends Plugin {
   // ----- picker -----
   pick(verb, fn) {
     const plugins = installedPlugins(this.app).filter((p) => p.id !== 'plugin-lab');
-    if (!plugins.length) { new Notice('Plugin Lab: no community plugins installed'); return; }
+    if (!plugins.length) { new Notice('Dev Lab: no community plugins installed'); return; }
     new PluginPicker(this.app, this, plugins, verb, async (p) => { this.settings.lastPlugin = p.id; await this.saveSettings(); this.refreshPanels(); await fn(p); }).open();
   }
 
   // ----- review -----
   async review(p) {
     const { dir, files } = await loadPluginFiles(this.app, p);
-    if (!files['main.js']) { new Notice(`Plugin Lab: ${p.name} has no main.js in ${dir}`); return; }
+    if (!files['main.js']) { new Notice(`Dev Lab: ${p.name} has no main.js in ${dir}`); return; }
     const r = reviewPlugin(p, files);
     const path = await this.writeNote(`Review ${stamp()}`, reviewNote(p, dir, files, r), this.pluginDir(p));
     await this.openNote(path);
-    new Notice(`Plugin Lab: ${p.name} — ${r.counts.error} errors, ${r.counts.warning} warnings`); this.refreshPanels();
+    new Notice(`Dev Lab: ${p.name} — ${r.counts.error} errors, ${r.counts.warning} warnings`); this.refreshPanels();
   }
   async reviewAll() {
     const plugins = installedPlugins(this.app);
     const rows = []; const batch = stamp();
-    this.statusEl.setText('Plugin Lab: reviewing…'); this.statusEl.show();
+    this.statusEl.setText('Dev Lab: reviewing…'); this.statusEl.show();
     for (const p of plugins) {
       const { dir, files } = await loadPluginFiles(this.app, p); if (!files['main.js']) continue;
       const r = reviewPlugin(p, files);
       const note = await this.writeNote(`Review ${batch}`, reviewNote(p, dir, files, r), this.pluginDir(p));
       const firstErr = r.sections.flatMap((s) => s.items).find((i) => i.blocks) || r.sections.flatMap((s) => s.items).find((i) => i.level === L.error);
       rows.push({ p, r, firstErr, note });
-      this.statusEl.setText(`Plugin Lab: reviewed ${rows.length}/${plugins.length}`);
+      this.statusEl.setText(`Dev Lab: reviewed ${rows.length}/${plugins.length}`);
     }
     this.statusEl.hide();
     const when = new Date();
@@ -566,7 +566,7 @@ class PluginLabPlugin extends Plugin {
     }
     const path = await this.writeNote(`Summary ${batch}`, out.join('\n'), this.settings.outputFolder);
     await this.openNote(path); this.refreshPanels();
-    new Notice(`Plugin Lab: ${rows.length} plugins reviewed, ${rows.filter((x) => x.r.counts.blocking).length} would fail`);
+    new Notice(`Dev Lab: ${rows.length} plugins reviewed, ${rows.filter((x) => x.r.counts.blocking).length} would fail`);
   }
   // ----- inventory -----
   async inventory(p) {
@@ -615,7 +615,7 @@ class PluginLabPlugin extends Plugin {
   }
   async capture(name, dir, focusEl, focusPad = 24, opts = {}) {
     const wc = this.electronWebContents();
-    if (!wc) { new Notice('Plugin Lab: screenshots need Obsidian desktop.'); throw new Error('no webContents'); }
+    if (!wc) { new Notice('Dev Lab: screenshots need Obsidian desktop.'); throw new Error('no webContents'); }
     const shown = this.statusEl.isShown(); if (shown) this.statusEl.hide();
     document.querySelectorAll(opts.keepNotices ? '.tooltip' : '.notice, .tooltip').forEach((n) => n.remove());
     await sleep(60);
@@ -637,7 +637,7 @@ class PluginLabPlugin extends Plugin {
   }
   async captureOne() {
     const name = `${this.isDark() ? 'dark' : 'light'}-${slug(this.currentTheme() || 'default')}-${stamp()}`;
-    try { const r = await this.capture(name, `${this.settings.outputFolder}/captures`, null); new Notice('Plugin Lab: saved ' + r.path); } catch (e) { console.error(e); }
+    try { const r = await this.capture(name, `${this.settings.outputFolder}/captures`, null); new Notice('Dev Lab: saved ' + r.path); } catch (e) { console.error(e); }
   }
 
   // ----- matrix -----
@@ -647,7 +647,7 @@ class PluginLabPlugin extends Plugin {
     const shots = []; const skipped = []; let n = 0;
     const total = cfg.themes.length * cfg.schemes.length * cfg.kinds.length;
     const progress = (m) => { this.statusEl.setText(m); this.statusEl.show(); };
-    progress('Plugin Lab: capturing…');
+    progress('Dev Lab: capturing…');
     try {
       for (const theme of cfg.themes) {
         const okT = await this.setTheme(theme);
@@ -661,15 +661,15 @@ class PluginLabPlugin extends Plugin {
             try {
               const shot = await this.captureKind(p, kind, name, shotDir);
               if (shot) shots.push(Object.assign(shot, { kind: kind.id, kindLabel: kind.label, label, theme, dark })); else skipped.push(`${kind.label} under ${label}: no modal, menu, popover or view appeared`);
-            } catch (e) { console.error('Plugin Lab capture failed', kind, e); skipped.push(`${kind.label} under ${label}: ${e.message}`); }
-            progress(`Plugin Lab: ${++n}/${total}`);
+            } catch (e) { console.error('Dev Lab capture failed', kind, e); skipped.push(`${kind.label} under ${label}: ${e.message}`); }
+            progress(`Dev Lab: ${++n}/${total}`);
           }
         }
       }
     } finally {
       await this.setTheme(startTheme); await this.setScheme(startDark); this.app.setting.close();
     }
-    progress('Plugin Lab: building contact sheets…');
+    progress('Dev Lab: building contact sheets…');
     const sheets = [];
     try {
       const folder = await this.ensureFolder(`${runDir}/sheets`);
@@ -678,7 +678,7 @@ class PluginLabPlugin extends Plugin {
         const cols = cfg.schemes.length;
         sheets.push({ path: await this.makeSheetFit(g.map((s) => s.path), g.map((s) => s.label), g.map((s) => s.focus), `${p.name} — ${kind.label}`, normalizePath(`${folder}/${slug(p.name)}-${slug(kind.id)}.png`), cols, cols === 1 ? 1100 : 760, runId), title: kind.label });
       }
-    } catch (e) { console.error('Plugin Lab sheets failed', e); }
+    } catch (e) { console.error('Dev Lab sheets failed', e); }
     this.statusEl.hide();
     const when = new Date();
     const md = ['---', `plugin: ${p.name}`, `plugin_id: ${p.id}`, `date: ${when.toISOString().slice(0, 10)}`, `themes: ${cfg.themes.length}`, `captures: ${shots.length}`, `sheets: ${sheets.length}`, 'tags: [plugin-lab, matrix]', '---', '', `# ${p.name} — UI under ${cfg.themes.length} theme${cfg.themes.length === 1 ? '' : 's'}`, '', `${when.toLocaleString()} · ${cfg.themes.map((t) => t || 'Default').join(', ')} · ${cfg.schemes.map((d) => d ? 'dark' : 'light').join(' + ')} · ${shots.length} captures`, '', '> [!tip] One row per theme, one column per scheme', `> Sheets are in \`${runDir}/sheets\`; every capture is in \`shots/\` as full window, \`-focus\` (the element) and \`-hero\` (1920 wide).`];
@@ -687,7 +687,7 @@ class PluginLabPlugin extends Plugin {
     md.push('');
     const path = await this.writeNote('Matrix', md.join('\n'), runDir);
     await this.openNote(path);
-    new Notice(`Plugin Lab: ${shots.length} captures, ${sheets.length} sheets`); this.refreshPanels();
+    new Notice(`Dev Lab: ${shots.length} captures, ${sheets.length} sheets`); this.refreshPanels();
   }
   async captureKind(p, kind, name, dir) {
     const wait = this.settings.settleMs;
@@ -752,7 +752,7 @@ class PluginLabPlugin extends Plugin {
     const view = this.app.workspace.getActiveViewOfType(obsidian.MarkdownView); if (view) return;
     const path = normalizePath(`${this.settings.outputFolder}/Scratch.md`);
     let f = this.app.vault.getAbstractFileByPath(path);
-    if (!(f instanceof TFile)) { await this.ensureFolder(this.settings.outputFolder); f = await this.app.vault.create(path, '# Scratch\n\nPlugin Lab opens this note so editor commands have somewhere to run. Safe to delete.\n'); }
+    if (!(f instanceof TFile)) { await this.ensureFolder(this.settings.outputFolder); f = await this.app.vault.create(path, '# Scratch\n\nDev Lab opens this note so editor commands have somewhere to run. Safe to delete.\n'); }
     await this.app.workspace.getLeaf(true).openFile(f); await sleep(this.settings.settleMs);
   }
   // ----- sheets (same chrome as Theme Lab) -----
@@ -771,7 +771,7 @@ class PluginLabPlugin extends Plugin {
     g.fillStyle = '#0f1013'; g.fillRect(0, 0, c.width, c.height); g.fillStyle = '#16181d'; g.fillRect(0, 0, c.width, head - 16); g.fillStyle = '#2a2d35'; g.fillRect(0, head - 16, c.width, 1);
     g.fillStyle = '#f2f3f5'; g.font = '600 24px ui-sans-serif, system-ui, sans-serif'; g.fillText(title, pad, 42);
     g.fillStyle = '#8b909b'; g.font = '14px ui-sans-serif, system-ui, sans-serif'; g.textAlign = 'right'; g.fillText(runId ? `run ${runId}` : '', c.width - pad, 42); g.textAlign = 'left';
-    g.fillStyle = '#6b6f78'; g.font = '12px ui-sans-serif, system-ui, sans-serif'; g.fillText(`Plugin Lab · ${imgs.length} capture${imgs.length === 1 ? '' : 's'} · ${new Date().toLocaleString()}`, pad, c.height - 14);
+    g.fillStyle = '#6b6f78'; g.font = '12px ui-sans-serif, system-ui, sans-serif'; g.fillText(`Dev Lab · ${imgs.length} capture${imgs.length === 1 ? '' : 's'} · ${new Date().toLocaleString()}`, pad, c.height - 14);
     imgs.forEach((im, i) => {
       const x = pad + (i % cols) * (cellW + pad), y = head + Math.floor(i / cols) * (cellH + lab + pad);
       g.font = '600 12px ui-monospace, SFMono-Regular, Menlo, monospace'; g.fillStyle = '#6b6f78'; g.fillText(String(i + 1).padStart(2, '0'), x, y + 21);
@@ -791,20 +791,20 @@ class PluginLabPlugin extends Plugin {
 class PluginLabView extends obsidian.ItemView {
   constructor(leaf, plugin) { super(leaf); this.plugin = plugin; }
   getViewType() { return VIEW_TYPE; }
-  getDisplayText() { return 'Plugin Lab'; }
+  getDisplayText() { return 'Dev Lab'; }
   getIcon() { return 'microscope'; }
   async onOpen() {
-    const root = this.contentEl; root.empty(); root.addClass('plugin-lab-panel');
+    const root = this.contentEl; root.empty(); root.addClass('dev-lab-panel');
     const p = this.plugin; const s = p.settings; s.panelOpen = s.panelOpen || {};
     // header: target plugin
-    const head = root.createDiv({ cls: 'plugin-lab-head' });
-    this.targetEl = head.createDiv({ cls: 'plugin-lab-head-target' });
-    const change = head.createEl('button', { cls: 'plugin-lab-mini plugin-lab-mini-text' }); setIcon(change, 'replace'); change.createSpan({ text: 'Change' }); change.onclick = () => p.pick('Target', async () => {});
+    const head = root.createDiv({ cls: 'dev-lab-head' });
+    this.targetEl = head.createDiv({ cls: 'dev-lab-head-target' });
+    const change = head.createEl('button', { cls: 'dev-lab-mini dev-lab-mini-text' }); setIcon(change, 'replace'); change.createSpan({ text: 'Change' }); change.onclick = () => p.pick('Target', async () => {});
     // toolbar
-    const tools = root.createDiv({ cls: 'plugin-lab-tools' });
-    const tool = (parent, label, icon, fn, tip) => { const b = parent.createEl('button', { cls: 'plugin-lab-tool' }); const ic = b.createSpan({ cls: 'plugin-lab-tool-icon' }); setIcon(ic, icon); b.createSpan({ text: label, cls: 'plugin-lab-tool-label' }); b.setAttribute('aria-label', tip || label); b.onclick = () => { b.blur(); fn(); }; return b; };
+    const tools = root.createDiv({ cls: 'dev-lab-tools' });
+    const tool = (parent, label, icon, fn, tip) => { const b = parent.createEl('button', { cls: 'dev-lab-tool' }); const ic = b.createSpan({ cls: 'dev-lab-tool-icon' }); setIcon(ic, icon); b.createSpan({ text: label, cls: 'dev-lab-tool-label' }); b.setAttribute('aria-label', tip || label); b.onclick = () => { b.blur(); fn(); }; return b; };
     const withTarget = (fn) => { const t = p.targetPlugin(); if (t) fn(t); else p.pick('Target', (t2) => fn(t2)); };
-    const seg = tools.createDiv({ cls: 'plugin-lab-seg' });
+    const seg = tools.createDiv({ cls: 'dev-lab-seg' });
     tool(seg, 'Review', 'microscope', () => withTarget((t) => p.review(t)), 'Pre-flight review → note');
     tool(seg, 'Inventory', 'list-checks', () => withTarget((t) => p.inventory(t)), 'Commands, settings, surfaces → note');
     tool(seg, 'Matrix', 'layout-grid', () => withTarget((t) => new MatrixModal(p.app, p, t).open()), 'Capture UI under every theme');
@@ -812,87 +812,87 @@ class PluginLabView extends obsidian.ItemView {
     tool(seg, 'All', 'clipboard-list', () => p.reviewAll(), 'Review every installed plugin');
     // sections
     const section = (key, title, right) => {
-      const d = root.createDiv({ cls: 'plugin-lab-section' }); const h = d.createDiv({ cls: 'plugin-lab-section-head' });
-      const chev = h.createSpan({ cls: 'plugin-lab-chevron' }); setIcon(chev, 'chevron-down'); h.createSpan({ text: title, cls: 'plugin-lab-section-title' });
-      const r = h.createDiv({ cls: 'plugin-lab-section-right' }); const body = d.createDiv({ cls: 'plugin-lab-section-body' });
+      const d = root.createDiv({ cls: 'dev-lab-section' }); const h = d.createDiv({ cls: 'dev-lab-section-head' });
+      const chev = h.createSpan({ cls: 'dev-lab-chevron' }); setIcon(chev, 'chevron-down'); h.createSpan({ text: title, cls: 'dev-lab-section-title' });
+      const r = h.createDiv({ cls: 'dev-lab-section-right' }); const body = d.createDiv({ cls: 'dev-lab-section-body' });
       const apply = () => d.toggleClass('is-collapsed', s.panelOpen[key] === false);
       h.onclick = (e) => { if (r.contains(e.target)) return; s.panelOpen[key] = s.panelOpen[key] === false; p.saveSettings(); apply(); };
       if (right) right(r); apply(); return body;
     };
-    this.checkBody = section('check', 'Pre-flight', (r) => { const b = r.createEl('button', { cls: 'plugin-lab-mini' }); setIcon(b, 'refresh-cw'); b.setAttribute('aria-label', 'Re-check'); b.onclick = () => this.refreshCheck(); });
+    this.checkBody = section('check', 'Pre-flight', (r) => { const b = r.createEl('button', { cls: 'dev-lab-mini' }); setIcon(b, 'refresh-cw'); b.setAttribute('aria-label', 'Re-check'); b.onclick = () => this.refreshCheck(); });
     this.cmdBody = section('commands', 'Commands');
     this.surfBody = section('surfaces', 'Surfaces');
-    this.runsBody = section('runs', 'Notes and runs', (r) => { const b = r.createEl('button', { cls: 'plugin-lab-mini' }); setIcon(b, 'refresh-cw'); b.setAttribute('aria-label', 'Refresh'); b.onclick = () => this.refreshRuns(); });
+    this.runsBody = section('runs', 'Notes and runs', (r) => { const b = r.createEl('button', { cls: 'dev-lab-mini' }); setIcon(b, 'refresh-cw'); b.setAttribute('aria-label', 'Refresh'); b.onclick = () => this.refreshRuns(); });
     this.registerEvent(p.app.workspace.on('css-change', () => this.refreshHead()));
     this.refresh();
   }
   refresh() { this.refreshHead(); this.refreshCheck(); this.refreshCommands(); this.refreshRuns(); }
   refreshHead() {
     if (!this.targetEl) return; const t = this.plugin.targetPlugin(); this.targetEl.empty();
-    if (!t) { this.targetEl.createDiv({ text: 'No plugin selected', cls: 'plugin-lab-head-name' }); this.targetEl.createDiv({ text: 'Pick one to review, inventory or capture.', cls: 'plugin-lab-head-meta' }); return; }
-    const n = this.targetEl.createDiv({ cls: 'plugin-lab-head-name' }); n.createSpan({ text: t.name });
-    n.createSpan({ text: t.enabled ? 'enabled' : 'disabled', cls: 'plugin-lab-badge' + (t.enabled ? ' is-on' : '') });
-    this.targetEl.createDiv({ text: `${t.id} · ${t.version} · ${t.author || ''}`, cls: 'plugin-lab-head-meta' });
+    if (!t) { this.targetEl.createDiv({ text: 'No plugin selected', cls: 'dev-lab-head-name' }); this.targetEl.createDiv({ text: 'Pick one to review, inventory or capture.', cls: 'dev-lab-head-meta' }); return; }
+    const n = this.targetEl.createDiv({ cls: 'dev-lab-head-name' }); n.createSpan({ text: t.name });
+    n.createSpan({ text: t.enabled ? 'enabled' : 'disabled', cls: 'dev-lab-badge' + (t.enabled ? ' is-on' : '') });
+    this.targetEl.createDiv({ text: `${t.id} · ${t.version} · ${t.author || ''}`, cls: 'dev-lab-head-meta' });
   }
   async refreshCheck() {
     const body = this.checkBody; if (!body) return; body.empty(); const p = this.plugin; const t = p.targetPlugin();
-    if (!t) { body.createEl('p', { text: 'Select a plugin.', cls: 'plugin-lab-hint' }); return; }
+    if (!t) { body.createEl('p', { text: 'Select a plugin.', cls: 'dev-lab-hint' }); return; }
     const { dir, files } = await loadPluginFiles(p.app, t);
-    if (!files['main.js']) { body.createEl('p', { text: `No main.js in ${dir}.`, cls: 'plugin-lab-hint' }); return; }
+    if (!files['main.js']) { body.createEl('p', { text: `No main.js in ${dir}.`, cls: 'dev-lab-hint' }); return; }
     const r = reviewPlugin(t, files); this._lastFiles = files; this._lastInv = null;
     const lintErr = r.counts.error - r.counts.blocking;
-    const sum = body.createDiv({ cls: 'plugin-lab-verdict ' + (r.counts.blocking ? 'is-fail' : 'is-pass') });
-    const ic = sum.createSpan({ cls: 'plugin-lab-verdict-icon' }); setIcon(ic, r.counts.blocking ? 'x-circle' : 'check-circle');
+    const sum = body.createDiv({ cls: 'dev-lab-verdict ' + (r.counts.blocking ? 'is-fail' : 'is-pass') });
+    const ic = sum.createSpan({ cls: 'dev-lab-verdict-icon' }); setIcon(ic, r.counts.blocking ? 'x-circle' : 'check-circle');
     sum.createSpan({ text: r.counts.blocking ? `Community review: would fail (${r.counts.blocking})` : 'Community review: would pass' });
-    const lint = body.createDiv({ cls: 'plugin-lab-verdict is-lint ' + (lintErr ? 'is-warn' : 'is-pass') });
-    const ic2 = lint.createSpan({ cls: 'plugin-lab-verdict-icon' }); setIcon(ic2, lintErr ? 'alert-triangle' : 'check-circle');
+    const lint = body.createDiv({ cls: 'dev-lab-verdict is-lint ' + (lintErr ? 'is-warn' : 'is-pass') });
+    const ic2 = lint.createSpan({ cls: 'dev-lab-verdict-icon' }); setIcon(ic2, lintErr ? 'alert-triangle' : 'check-circle');
     lint.createSpan({ text: `Official linter: ${lintErr} error${lintErr === 1 ? '' : 's'} · ${r.counts.warning} warning${r.counts.warning === 1 ? '' : 's'}` });
-    body.createDiv({ text: `${r.counts.rec} recommendations · ${r.counts.pass} passes`, cls: 'plugin-lab-hint' });
+    body.createDiv({ text: `${r.counts.rec} recommendations · ${r.counts.pass} passes`, cls: 'dev-lab-hint' });
     const items = r.sections.flatMap((sec) => sec.items.map((i) => Object.assign({ section: sec.name }, i))).filter((i) => i.level === L.error || i.level === L.warning || i.level === L.rec);
     const order = { Error: 0, Warning: 1, Recommendation: 2 }; items.sort((a, b) => order[a.level] - order[b.level]);
-    const list = body.createDiv({ cls: 'plugin-lab-items' });
+    const list = body.createDiv({ cls: 'dev-lab-items' });
     for (const i of items.slice(0, 12)) {
-      const row = list.createDiv({ cls: 'plugin-lab-item is-' + i.level.toLowerCase() });
-      row.createSpan({ text: i.level === 'Error' ? '✗' : i.level === 'Warning' ? '⚠' : '△', cls: 'plugin-lab-item-mark' });
-      const tx = row.createDiv({ cls: 'plugin-lab-item-text' }); tx.createSpan({ text: i.text.replace(/`/g, '') });
-      tx.createDiv({ text: `${i.section}${i.file ? ' · ' + i.file + (i.line ? ':' + i.line : '') : ''}`, cls: 'plugin-lab-item-where' });
+      const row = list.createDiv({ cls: 'dev-lab-item is-' + i.level.toLowerCase() });
+      row.createSpan({ text: i.level === 'Error' ? '✗' : i.level === 'Warning' ? '⚠' : '△', cls: 'dev-lab-item-mark' });
+      const tx = row.createDiv({ cls: 'dev-lab-item-text' }); tx.createSpan({ text: i.text.replace(/`/g, '') });
+      tx.createDiv({ text: `${i.section}${i.file ? ' · ' + i.file + (i.line ? ':' + i.line : '') : ''}`, cls: 'dev-lab-item-where' });
     }
-    if (items.length > 12) body.createDiv({ text: `+ ${items.length - 12} more in the full note`, cls: 'plugin-lab-hint' });
-    const foot = body.createDiv({ cls: 'plugin-lab-foot' }); foot.createSpan();
-    const fb = foot.createDiv({ cls: 'plugin-lab-foot-buttons' });
+    if (items.length > 12) body.createDiv({ text: `+ ${items.length - 12} more in the full note`, cls: 'dev-lab-hint' });
+    const foot = body.createDiv({ cls: 'dev-lab-foot' }); foot.createSpan();
+    const fb = foot.createDiv({ cls: 'dev-lab-foot-buttons' });
     new obsidian.ButtonComponent(fb).setButtonText('Write full note').setCta().onClick(() => p.review(t));
   }
   async refreshCommands() {
     const body = this.cmdBody, sb = this.surfBody; if (!body) return; body.empty(); sb.empty(); const p = this.plugin; const t = p.targetPlugin();
-    if (!t) { body.createEl('p', { text: 'Select a plugin.', cls: 'plugin-lab-hint' }); return; }
+    if (!t) { body.createEl('p', { text: 'Select a plugin.', cls: 'dev-lab-hint' }); return; }
     const { files } = await loadPluginFiles(p.app, t); const inv = inventoryPlugin(p.app, t, files);
-    if (!inv.cmds.length) body.createEl('p', { text: t.enabled ? 'No commands registered.' : 'Enable the plugin to see its commands.', cls: 'plugin-lab-hint' });
+    if (!inv.cmds.length) body.createEl('p', { text: t.enabled ? 'No commands registered.' : 'Enable the plugin to see its commands.', cls: 'dev-lab-hint' });
     for (const c of inv.cmds) {
-      const row = body.createDiv({ cls: 'plugin-lab-cmd' });
-      const name = row.createDiv({ cls: 'plugin-lab-cmd-name', text: c.name.replace(/^[^:]+:\s*/, '') });
-      const d = describeCommand(inv.analysis[c.id.slice(t.id.length + 1)]); if (d) row.createSpan({ text: d, cls: 'plugin-lab-tag' });
-      const hk = inv.hotkeyOf(c); if (hk) row.createSpan({ text: hk, cls: 'plugin-lab-kbd' });
-      const run = row.createEl('button', { cls: 'plugin-lab-mini' }); setIcon(run, 'play'); run.setAttribute('aria-label', 'Run'); run.onclick = () => p.app.commands.executeCommandById(c.id);
+      const row = body.createDiv({ cls: 'dev-lab-cmd' });
+      const name = row.createDiv({ cls: 'dev-lab-cmd-name', text: c.name.replace(/^[^:]+:\s*/, '') });
+      const d = describeCommand(inv.analysis[c.id.slice(t.id.length + 1)]); if (d) row.createSpan({ text: d, cls: 'dev-lab-tag' });
+      const hk = inv.hotkeyOf(c); if (hk) row.createSpan({ text: hk, cls: 'dev-lab-kbd' });
+      const run = row.createEl('button', { cls: 'dev-lab-mini' }); setIcon(run, 'play'); run.setAttribute('aria-label', 'Run'); run.onclick = () => p.app.commands.executeCommandById(c.id);
       name.setAttribute('aria-label', c.id);
     }
     // surfaces
-    const chip = (label, icon, fn) => { const b = sb.createEl('button', { cls: 'plugin-lab-chip' }); const ic = b.createSpan(); setIcon(ic, icon); b.createSpan({ text: label }); if (fn) b.onclick = fn; else b.disabled = true; return b; };
+    const chip = (label, icon, fn) => { const b = sb.createEl('button', { cls: 'dev-lab-chip' }); const ic = b.createSpan(); setIcon(ic, icon); b.createSpan({ text: label }); if (fn) b.onclick = fn; else b.disabled = true; return b; };
     chip('Settings tab', 'settings', () => { p.app.setting.open(); p.app.setting.openTabById(t.id); });
     for (const v of inv.viewTypes) chip(`View ${v}`, 'panel-right', async () => { let leaves = p.app.workspace.getLeavesOfType(v); if (!leaves.length) { const leaf = p.app.workspace.getRightLeaf(false); await leaf.setViewState({ type: v, active: true }); leaves = [leaf]; } p.app.workspace.revealLeaf(leaves[0]); });
     for (const r of inv.ribbons) chip(`Ribbon ${r}`, r, null);
     for (const b of inv.processors) chip('```' + b, 'code', null);
     for (const u of inv.protocol) chip(`obsidian://${u}`, 'link', null);
     if (inv.fileMenu) chip('File menu', 'file', null); if (inv.editorMenu) chip('Editor menu', 'pencil', null);
-    if (!sb.children.length) sb.createEl('p', { text: 'Commands only.', cls: 'plugin-lab-hint' });
+    if (!sb.children.length) sb.createEl('p', { text: 'Commands only.', cls: 'dev-lab-hint' });
   }
   async refreshRuns() {
     const body = this.runsBody; if (!body) return; body.empty(); const p = this.plugin; const t = p.targetPlugin();
-    if (!t) { body.createEl('p', { text: 'Select a plugin.', cls: 'plugin-lab-hint' }); return; }
+    if (!t) { body.createEl('p', { text: 'Select a plugin.', cls: 'dev-lab-hint' }); return; }
     const { runs, notes } = await p.listRuns(t);
-    if (!runs.length && !notes.length) { body.createEl('p', { text: `Nothing written for ${t.name} yet.`, cls: 'plugin-lab-hint' }); return; }
+    if (!runs.length && !notes.length) { body.createEl('p', { text: `Nothing written for ${t.name} yet.`, cls: 'dev-lab-hint' }); return; }
     const open = async (path) => { const f = p.app.vault.getAbstractFileByPath(path); if (f instanceof TFile) await p.app.workspace.getLeaf(true).openFile(f); };
-    for (const n of notes.slice(0, 6)) { const row = body.createDiv({ cls: 'plugin-lab-run' }); const nm = n.split('/').pop().replace(/\.md$/, ''); const m = nm.match(/^(\w+) (\d{4}-\d{2}-\d{2}) (\d{2})(\d{2})/); row.createSpan({ text: m ? `${m[1]} · ${m[2]} ${m[3]}:${m[4]}` : nm, cls: 'plugin-lab-run-name' }); const b = row.createEl('button', { cls: 'plugin-lab-mini plugin-lab-mini-text' }); setIcon(b, 'file-text'); b.createSpan({ text: 'Open' }); b.onclick = () => open(n); }
-    for (const r of runs.slice(0, 6)) { const row = body.createDiv({ cls: 'plugin-lab-run' }); const id = r.split('/').pop(); const m = id.match(/^(\d{4}-\d{2}-\d{2}) (\d{2})(\d{2})/); row.createSpan({ text: m ? `Matrix · ${m[1]} ${m[2]}:${m[3]}` : id, cls: 'plugin-lab-run-name' }); const b = row.createEl('button', { cls: 'plugin-lab-mini plugin-lab-mini-text' }); setIcon(b, 'image'); b.createSpan({ text: 'Open' }); b.onclick = () => open(`${r}/Matrix.md`); }
+    for (const n of notes.slice(0, 6)) { const row = body.createDiv({ cls: 'dev-lab-run' }); const nm = n.split('/').pop().replace(/\.md$/, ''); const m = nm.match(/^(\w+) (\d{4}-\d{2}-\d{2}) (\d{2})(\d{2})/); row.createSpan({ text: m ? `${m[1]} · ${m[2]} ${m[3]}:${m[4]}` : nm, cls: 'dev-lab-run-name' }); const b = row.createEl('button', { cls: 'dev-lab-mini dev-lab-mini-text' }); setIcon(b, 'file-text'); b.createSpan({ text: 'Open' }); b.onclick = () => open(n); }
+    for (const r of runs.slice(0, 6)) { const row = body.createDiv({ cls: 'dev-lab-run' }); const id = r.split('/').pop(); const m = id.match(/^(\d{4}-\d{2}-\d{2}) (\d{2})(\d{2})/); row.createSpan({ text: m ? `Matrix · ${m[1]} ${m[2]}:${m[3]}` : id, cls: 'dev-lab-run-name' }); const b = row.createEl('button', { cls: 'dev-lab-mini dev-lab-mini-text' }); setIcon(b, 'image'); b.createSpan({ text: 'Open' }); b.onclick = () => open(`${r}/Matrix.md`); }
   }
   async onClose() { this.contentEl.empty(); }
 }
@@ -906,9 +906,9 @@ class PluginPicker extends SuggestModal {
     return list.sort((a, b) => (b.id === last) - (a.id === last) || a.name.localeCompare(b.name));
   }
   renderSuggestion(p, el) {
-    el.addClass('plugin-lab-pick');
-    const n = el.createDiv({ cls: 'plugin-lab-pick-name' }); n.createEl('b', { text: p.name }); n.createSpan({ text: p.id, cls: 'plugin-lab-pick-id' });
-    el.createDiv({ text: `${p.version} · ${p.author || ''}${p.enabled ? '' : ' · disabled'}`, cls: 'plugin-lab-pick-meta' + (p.enabled ? '' : ' plugin-lab-pick-off') });
+    el.addClass('dev-lab-pick');
+    const n = el.createDiv({ cls: 'dev-lab-pick-name' }); n.createEl('b', { text: p.name }); n.createSpan({ text: p.id, cls: 'dev-lab-pick-id' });
+    el.createDiv({ text: `${p.version} · ${p.author || ''}${p.enabled ? '' : ' · disabled'}`, cls: 'dev-lab-pick-meta' + (p.enabled ? '' : ' dev-lab-pick-off') });
   }
   onChooseSuggestion(p) { this.onPick(p); }
 }
@@ -916,20 +916,20 @@ class PluginPicker extends SuggestModal {
 // ---------- matrix modal ----------
 class MatrixModal extends Modal {
   constructor(app, plugin, target) { super(app); this.plugin = plugin; this.target = target; }
-  onOpen() { this.modalEl.addClass('plugin-lab-modal'); this.render(); }
+  onOpen() { this.modalEl.addClass('dev-lab-modal'); this.render(); }
   render() {
     const s = this.plugin.settings; const p = this.plugin; const { contentEl } = this; contentEl.empty();
     this.titleEl.setText('Capture UI under every theme');
-    contentEl.createEl('p', { text: 'Switches through the chosen themes and schemes, captures each surface, restores your theme, and tiles the results one theme per row. Keep the window in front.', cls: 'plugin-lab-modal-intro' });
-    const t = contentEl.createDiv({ cls: 'plugin-lab-target' }); const ic = t.createSpan(); setIcon(ic, 'puzzle'); t.createEl('b', { text: this.target.name }); t.createSpan({ text: this.target.id });
+    contentEl.createEl('p', { text: 'Switches through the chosen themes and schemes, captures each surface, restores your theme, and tiles the results one theme per row. Keep the window in front.', cls: 'dev-lab-modal-intro' });
+    const t = contentEl.createDiv({ cls: 'dev-lab-target' }); const ic = t.createSpan(); setIcon(ic, 'puzzle'); t.createEl('b', { text: this.target.name }); t.createSpan({ text: this.target.id });
     const group = (title, desc, items, get, set, allNone) => {
-      const g = contentEl.createDiv({ cls: 'plugin-lab-group' }); const gh = g.createDiv({ cls: 'plugin-lab-group-head' });
-      gh.createSpan({ text: title, cls: 'plugin-lab-group-title' }); if (desc) gh.createSpan({ text: desc, cls: 'plugin-lab-group-desc' });
+      const g = contentEl.createDiv({ cls: 'dev-lab-group' }); const gh = g.createDiv({ cls: 'dev-lab-group-head' });
+      gh.createSpan({ text: title, cls: 'dev-lab-group-title' }); if (desc) gh.createSpan({ text: desc, cls: 'dev-lab-group-desc' });
       const toggles = [];
-      if (allNone) { const an = gh.createDiv({ cls: 'plugin-lab-group-links' }); const setAll = (v) => { items.forEach((it) => set(it.key, v)); toggles.forEach((tg) => tg.setValue(v)); this.refresh(); }; an.createEl('a', { text: 'All' }).onclick = () => setAll(true); an.createEl('a', { text: 'None' }).onclick = () => setAll(false); }
-      const grid = g.createDiv({ cls: 'plugin-lab-grid' });
+      if (allNone) { const an = gh.createDiv({ cls: 'dev-lab-group-links' }); const setAll = (v) => { items.forEach((it) => set(it.key, v)); toggles.forEach((tg) => tg.setValue(v)); this.refresh(); }; an.createEl('a', { text: 'All' }).onclick = () => setAll(true); an.createEl('a', { text: 'None' }).onclick = () => setAll(false); }
+      const grid = g.createDiv({ cls: 'dev-lab-grid' });
       for (const it of items) {
-        const item = grid.createDiv({ cls: 'plugin-lab-grid-item' }); item.createSpan({ text: it.label, cls: 'plugin-lab-grid-label' });
+        const item = grid.createDiv({ cls: 'dev-lab-grid-item' }); item.createSpan({ text: it.label, cls: 'dev-lab-grid-label' });
         const tg = new obsidian.ToggleComponent(item).setValue(get(it.key)).onChange((v) => { set(it.key, v); this.refresh(); }); toggles.push(tg);
         item.onclick = (e) => { if (e.target.closest('.checkbox-container')) return; tg.setValue(!tg.getValue()); set(it.key, tg.getValue()); this.refresh(); };
       }
@@ -944,13 +944,13 @@ class MatrixModal extends Modal {
     const an = this._analysis || {};
     if (cmds.length && this._analysis && !s.commandPicks['__seeded:' + this.target.id]) { for (const c of cmds) { const a = an[c.id.slice(this.target.id.length + 1)]; if (commandIsSafeToSweep(a)) s.commandPicks[c.id] = true; } s.commandPicks['__seeded:' + this.target.id] = true; }
     if (cmds.length) group('Commands', 'Read from main.js: what each one does. Dialog- and view-openers that don\'t write are pre-ticked; the rest run for real, so tick them knowingly.', cmds.map((c) => { const d = describeCommand(an[c.id.slice(this.target.id.length + 1)]); return { key: c.id, label: c.name.replace(/^[^:]+:\s*/, '') + (d ? ` — ${d}` : '') }; }), (k) => !!s.commandPicks[k], (k, v) => { s.commandPicks[k] = v; }, true);
-    else if (!this.target.enabled) contentEl.createEl('p', { text: 'Enable the plugin to sweep its commands and ribbon icons.', cls: 'plugin-lab-hint' });
+    else if (!this.target.enabled) contentEl.createEl('p', { text: 'Enable the plugin to sweep its commands and ribbon icons.', cls: 'dev-lab-hint' });
     const ribbons = [...document.querySelectorAll('.side-dock-ribbon-action')].map((b) => b.getAttribute('aria-label')).filter((l) => l && (this._detectedRibbons || []).includes(l));
     s.ribbonPicks = s.ribbonPicks || {};
     if (ribbons.length) group('Ribbon icons', 'Click each and capture what opens.', ribbons.map((l) => ({ key: l, label: l })), (k) => !!s.ribbonPicks[k], (k, v) => { s.ribbonPicks[k] = v; }, true);
     new Setting(contentEl).setName('View types').setDesc('One per line. Leave empty to use the view types found in the plugin\'s main.js. Views that are not open get opened in the right sidebar.').addTextArea((ta) => { ta.setValue(s.viewTypes); ta.inputEl.rows = 2; ta.inputEl.placeholder = this._detectedViews ? this._detectedViews.join('\n') : 'my-plugin-view'; ta.onChange((v) => { s.viewTypes = v; this.refresh(); }); });
-    const foot = contentEl.createDiv({ cls: 'plugin-lab-modal-foot' }); this.estimateEl = foot.createDiv({ cls: 'plugin-lab-estimate' });
-    const fb = foot.createDiv({ cls: 'plugin-lab-foot-buttons' });
+    const foot = contentEl.createDiv({ cls: 'dev-lab-modal-foot' }); this.estimateEl = foot.createDiv({ cls: 'dev-lab-estimate' });
+    const fb = foot.createDiv({ cls: 'dev-lab-foot-buttons' });
     new obsidian.ButtonComponent(fb).setButtonText('Cancel').onClick(() => this.close());
     new obsidian.ButtonComponent(fb).setButtonText('Capture').setCta().onClick(() => this.start());
     if (!this._detectedViews) loadPluginFiles(this.app, this.target).then(({ files }) => { const inv2 = inventoryPlugin(this.app, this.target, files); this._detectedViews = inv2.viewTypes; this._detectedRibbons = inv2.ribbonLabels; this._analysis = inv2.analysis; this.render(); });
@@ -978,24 +978,24 @@ class MatrixModal extends Modal {
     this.estimateEl.toggleClass('is-warning', !ok);
   }
   async start() {
-    const c = this.config(); if (!(c.themes.length && c.schemes.length && c.kinds.length)) { new Notice('Plugin Lab: pick at least one theme, scheme and surface.'); return; }
+    const c = this.config(); if (!(c.themes.length && c.schemes.length && c.kinds.length)) { new Notice('Dev Lab: pick at least one theme, scheme and surface.'); return; }
     await this.plugin.saveSettings(); this.close();
-    try { await this.plugin.runMatrix(this.target, c); } catch (e) { console.error(e); new Notice('Plugin Lab: capture failed — see console'); }
+    try { await this.plugin.runMatrix(this.target, c); } catch (e) { console.error(e); new Notice('Dev Lab: capture failed — see console'); }
   }
   onClose() { this.contentEl.empty(); }
 }
 
 // ---------- settings ----------
 function iconButton(parent, label, icon, fn, cta) {
-  const b = parent.createEl('button', { cls: 'plugin-lab-iconbtn' + (cta ? ' mod-cta' : '') });
-  const ic = b.createSpan({ cls: 'plugin-lab-iconbtn-icon' }); setIcon(ic, icon); b.createSpan({ text: label }); b.onclick = fn; return b;
+  const b = parent.createEl('button', { cls: 'dev-lab-iconbtn' + (cta ? ' mod-cta' : '') });
+  const ic = b.createSpan({ cls: 'dev-lab-iconbtn-icon' }); setIcon(ic, icon); b.createSpan({ text: label }); b.onclick = fn; return b;
 }
 class PluginLabSettingTab extends PluginSettingTab {
   constructor(app, plugin) { super(app, plugin); this.plugin = plugin; }
   display() {
-    const { containerEl } = this; const s = this.plugin.settings; const p = this.plugin; containerEl.empty(); containerEl.addClass('plugin-lab-settings');
+    const { containerEl } = this; const s = this.plugin.settings; const p = this.plugin; containerEl.empty(); containerEl.addClass('dev-lab-settings');
     const save = () => p.saveSettings();
-    const actions = containerEl.createDiv({ cls: 'plugin-lab-actions' });
+    const actions = containerEl.createDiv({ cls: 'dev-lab-actions' });
     const act = (label, icon, cta, fn) => iconButton(actions, label, icon, async () => { this.app.setting.close(); await fn(); }, cta);
     act('Open panel', 'microscope', true, () => p.openPanel());
     act('Review a plugin', 'search-check', false, () => p.pick('Review', (t) => p.review(t)));
@@ -1008,7 +1008,7 @@ class PluginLabSettingTab extends PluginSettingTab {
     new Setting(containerEl).setName('Hero image').setDesc('Also write each capture resized to 1920 px wide, for READMEs and listing pages.').addToggle((t) => t.setValue(s.cropHero).onChange(async (v) => { s.cropHero = v; await save(); }));
 
     new Setting(containerEl).setName('Output').setHeading();
-    new Setting(containerEl).setName('Folder').setDesc('Reviews, inventories and matrix runs are filed under this folder, then the plugin name.').addText((t) => t.setValue(s.outputFolder).setPlaceholder('Plugin Lab').onChange(async (v) => { s.outputFolder = v.trim() || 'Plugin Lab'; await save(); }));
+    new Setting(containerEl).setName('Folder').setDesc('Reviews, inventories and matrix runs are filed under this folder, then the plugin name.').addText((t) => t.setValue(s.outputFolder).setPlaceholder('Dev Lab').onChange(async (v) => { s.outputFolder = v.trim() || 'Dev Lab'; await save(); }));
   }
 }
 

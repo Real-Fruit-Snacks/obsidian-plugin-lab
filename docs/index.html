@@ -3,10 +3,10 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Plugin Lab — a pre-flight review and UI lab for Obsidian plugins</title>
-<meta name="description" content="Plugin Lab reviews an installed plugin the way the community review and the official linter will, inventories its commands and settings, and captures its UI under every installed theme in dark and light.">
+<title>Dev Lab — a pre-flight review and UI lab for Obsidian plugins</title>
+<meta name="description" content="Dev Lab reviews an installed plugin the way the community review and the official linter will, inventories its commands and settings, and captures its UI under every installed theme in dark and light.">
 <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
-<meta property="og:title" content="Plugin Lab for Obsidian">
+<meta property="og:title" content="Dev Lab for Obsidian">
 <meta property="og:description" content="Ship a plugin that passes review the first time. Pre-flight review, inventory, and UI under every theme.">
 <meta property="og:image" content="https://real-fruit-snacks.github.io/obsidian-plugin-lab/assets/screenshot.png">
 <meta name="twitter:card" content="summary_large_image">
@@ -35,7 +35,7 @@
 <div class="wrap">
   <header class="site-header">
     <a class="owner" href="https://github.com/Real-Fruit-Snacks"><i></i>Real-Fruit-Snacks</a>
-    <span class="crumb">/</span><span class="proj">Plugin Lab</span>
+    <span class="crumb">/</span><span class="proj">Dev Lab</span>
     <nav>
       <a href="#features">Features</a>
       <a href="#review">The review</a>
@@ -48,12 +48,12 @@
   <div class="hero">
     <div class="pill"><b>Plugin</b> for plugin authors · desktop</div>
     <h1>Ship a plugin that passes review the first time.</h1>
-    <p class="lede">Plugin Lab reads an installed plugin and tells you what the community review will say and what the official linter would flag — rule id, file, line. Then it inventories the plugin and captures its UI under every theme you have.</p>
+    <p class="lede">Dev Lab reads an installed plugin and tells you what the community review will say and what the official linter would flag — rule id, file, line. Then it inventories the plugin and captures its UI under every theme you have.</p>
     <div class="actions">
-      <a class="btn primary" href="#install">Install Plugin Lab</a>
+      <a class="btn primary" href="#install">Install Dev Lab</a>
       <a class="btn secondary" href="https://github.com/Real-Fruit-Snacks/obsidian-plugin-lab">View source</a>
     </div>
-    <div class="frame"><img src="assets/hero.png" alt="Plugin Lab: the panel reviewing a plugin, a summary of every installed plugin, and a dialog captured under a theme in both schemes"></div>
+    <div class="frame"><img src="assets/hero.png" alt="Dev Lab: the panel reviewing a plugin, a summary of every installed plugin, and a dialog captured under a theme in both schemes"></div>
   </div>
 
   <section id="features">
@@ -71,7 +71,7 @@
 
   <section id="review" class="left">
     <h2>Two verdicts, on purpose</h2>
-    <p class="sub">A plugin can be listed and still fail the linter. Plugin Lab never conflates the two.</p>
+    <p class="sub">A plugin can be listed and still fail the linter. Dev Lab never conflates the two.</p>
     <div class="verdicts">
       <div class="verdict pass"><b>Community review: would pass</b><p>The gate for the directory. Only rules verified to block a listing count here: the manifest words the review rejects, a malformed version, obfuscation, analytics SDKs. Calibrated against a dozen listed plugins until it matched their real scorecards.</p></div>
       <div class="verdict lint"><b>Official linter: 2 errors · 5 warnings</b><p><a href="https://github.com/obsidianmd/eslint-plugin">eslint-plugin-obsidianmd</a>, the guideline linter reviewers point people to. Errors are its enabled rules, warnings its warn-level rules. Not enforced by the directory — but it's what "please follow the guidelines" means.</p></div>
@@ -114,7 +114,7 @@
         <h2>Install</h2>
         <p class="sub">From the community list, or three files by hand.</p>
         <ol class="steps">
-          <li><b>Community plugins</b> Settings → Community plugins → Browse → search "Plugin Lab".</li>
+          <li><b>Community plugins</b> Settings → Community plugins → Browse → search "Dev Lab".</li>
           <li><b>Manual</b> Download <code>main.js</code>, <code>styles.css</code> and <code>manifest.json</code> from the <a href="https://github.com/Real-Fruit-Snacks/obsidian-plugin-lab/releases/latest">latest release</a> into <code>.obsidian/plugins/plugin-lab/</code>, then enable it.</li>
         </ol>
         <div class="callout"><b>Desktop only.</b> Captures use Electron's <code>capturePage</code>. No network requests; everything stays in your vault.</div>
@@ -126,7 +126,7 @@
       styles.css
       manifest.json
 
-Plugin Lab/                 in your vault
+Dev Lab/                 in your vault
   Thoughtbin/
     Review 2026-09-12 …md
     Inventory 2026-09-12 …md
@@ -140,6 +140,10 @@ Plugin Lab/                 in your vault
   <section id="changelog" class="left">
     <h2>Changelog</h2>
     <p class="sub">Bare version numbers as tags; releases are built by the workflow.</p>
+    <div class="release">
+      <div class="v">1.0.1<small>2026-09-13</small></div>
+      <ul><li>Renamed to Dev Lab — the directory rejects "Plugin" in a name. Same id, same commands.</li></ul>
+    </div>
     <div class="release">
       <div class="v">1.0.0<small>2026-09-13</small></div>
       <ul>
@@ -158,7 +162,7 @@ Plugin Lab/                 in your vault
     <div class="proj">
       <a href="https://real-fruit-snacks.github.io/obsidian-Thoughtbin/"><i style="background:#7C9CFF"></i><b>Thoughtbin</b><span>Obsidian plugin — a private timeline for quick thoughts</span></a>
       <a href="https://real-fruit-snacks.github.io/obsidian-theme-lab/"><i style="background:#E0554A"></i><b>Theme Lab</b><span>Obsidian plugin — build themes from inside Obsidian</span></a>
-      <a href="#" aria-current="page"><i style="background:#3DBE8B"></i><b>Plugin Lab</b><span>Obsidian plugin — ship a plugin that passes review</span></a>
+      <a href="#" aria-current="page"><i style="background:#3DBE8B"></i><b>Dev Lab</b><span>Obsidian plugin — ship a plugin that passes review</span></a>
       <a href="https://real-fruit-snacks.github.io/obsidian-glow/"><i style="background:#B48CFF"></i><b>Glow</b><span>Obsidian theme — calm dark with a little light</span></a>
       <a href="https://real-fruit-snacks.github.io/obsidian-outrun/"><i style="background:#FF3FA4"></i><b>Outrun</b><span>Obsidian theme — 1986 never ended</span></a>
       <a href="https://real-fruit-snacks.github.io/obsidian-dossier/"><i style="background:#CBAA6C"></i><b>Dossier</b><span>Obsidian theme — every note is a case file</span></a>
@@ -168,7 +172,7 @@ Plugin Lab/                 in your vault
   </section>
 
   <footer class="site-footer">
-    <span>Plugin Lab by <a href="https://github.com/Real-Fruit-Snacks">Real-Fruit-Snacks</a> · MIT</span>
+    <span>Dev Lab by <a href="https://github.com/Real-Fruit-Snacks">Real-Fruit-Snacks</a> · MIT</span>
     <span>Rules mirrored from eslint-plugin-obsidianmd, MIT © Obsidian</span>
   </footer>
 </div>

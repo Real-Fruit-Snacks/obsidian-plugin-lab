@@ -1,12 +1,12 @@
 name: Bug report
-description: Something in Plugin Lab doesn't work as described
+description: Something in Dev Lab doesn't work as described
 labels: [bug]
 body:
   - type: input
     id: versions
     attributes:
       label: Versions
-      placeholder: Obsidian 1.9.x · Plugin Lab 1.0.0 · Linux
+      placeholder: Obsidian 1.9.x · Dev Lab 1.0.0 · Linux
     validations:
       required: true
   - type: dropdown

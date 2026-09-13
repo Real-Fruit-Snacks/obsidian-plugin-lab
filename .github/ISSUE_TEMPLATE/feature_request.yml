@@ -1,5 +1,5 @@
 name: Feature request
-description: Something Plugin Lab should check or capture
+description: Something Dev Lab should check or capture
 labels: [enhancement]
 body:
   - type: textarea

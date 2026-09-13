@@ -1,6 +1,12 @@
 # Changelog
 
-All notable changes to Plugin Lab are listed here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and versions follow [Semantic Versioning](https://semver.org/).
+All notable changes to Dev Lab are listed here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and versions follow [Semantic Versioning](https://semver.org/).
+
+## [1.0.1] - 2026-09-13
+
+### Changed
+- Renamed to Dev Lab: the community review rejects "Plugin" in a plugin name. The id, folder and commands are unchanged; the output folder default is now `Dev Lab/`.
+- The review's own rule now marks "Plugin" in a manifest name as blocking, since the review does.
 
 ## [1.0.0] - 2026-09-13
 
@@ -11,4 +17,5 @@ All notable changes to Plugin Lab are listed here. The format follows [Keep a Ch
 - **UI under every theme**: settings tab, views, ribbon icons, commands (pre-ticked when the code shows they open something without writing) and the current scene, captured under every installed theme × dark/light, tiled one theme per row; theme and scheme restored afterwards.
 - **Panel** with the target plugin, live pre-flight, commands with run buttons, surface chips, and the notes and runs list.
 
+[1.0.1]: https://github.com/Real-Fruit-Snacks/obsidian-plugin-lab/releases/tag/1.0.1
 [1.0.0]: https://github.com/Real-Fruit-Snacks/obsidian-plugin-lab/releases/tag/1.0.0
