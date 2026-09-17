@@ -27,6 +27,12 @@ Every finding carries its rule id linked to the official rule doc, the file and 
 
 The engine masks comments, regex literals and string contents before scanning, so a plugin that *mentions* `eval` in a message doesn't get flagged for it. It was calibrated against a dozen listed plugins until its community-review verdict matched their real scorecards.
 
+### Accessibility audit
+
+The review reads the code; the audit watches what the code renders. **Audit** opens the plugin's settings tab, its registered views and its safe commands — in dark and light — and probes the DOM that appears: an icon-only button with no accessible name, a control the keyboard cannot reach, a focus ring that never becomes visible, a click target under 24 × 24 px, text below 4.5:1 against its resolved background under the theme you're running, plus the usual ARIA and structure mistakes.
+
+It writes a note grouped by rule, each row naming the surface, the scheme and the element. The panel carries the result as a third verdict row beside the two review verdicts. It is advice, not a listing gate — the community review does not check any of this, which is rather the point.
+
 ### Inventory
 
 One note: every command with its current hotkey and what it does (read from the code: opens a dialog, opens a view, needs an editor, writes files, uses the network), every setting in source order with its type and description, headings, ribbon icons, views, code-block processors, URI handlers, menu hooks, dialog classes, the keys stored in `data.json`, and a README-ready snippet.
@@ -43,7 +49,7 @@ The matrix dialog lists your installed themes (plus the default), dark and light
 
 ### The panel
 
-A right-sidebar panel with the target plugin, the five tools, a live pre-flight (re-checked on demand, without writing anything), the plugin's commands with a run button, its surfaces as chips that open them, and its review, inventory and matrix notes.
+A right-sidebar panel with the target plugin, the five tools, a live pre-flight (re-checked on demand, without writing anything), the accessibility verdict, the plugin's commands with a run button, its surfaces as chips that open them, and its review, inventory and matrix notes.
 
 ## Install
 

@@ -2,6 +2,13 @@
 
 All notable changes to Dev Lab are listed here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and versions follow [Semantic Versioning](https://semver.org/).
 
+## [1.1.0] - 2026-09-17
+
+### Added
+- **Accessibility audit.** A third verdict beside the community review and the official linter, from a live sweep: Dev Lab opens the plugin's settings tab, its views and its safe commands in both schemes and probes the DOM that appears. It writes a note grouped by rule, with the surface, the scheme and the element for every finding.
+- Checks: `a11y/control-name` (an icon-only button with no accessible name, an input with no label), `a11y/control-focusable` (a control the keyboard cannot reach), `a11y/focus-visible` (focusing a control changes nothing on screen), `a11y/target-size` (under 24 × 24 px), `a11y/text-contrast` (below 4.5:1, or 3:1 for large text, against the resolved background under the theme in use), `a11y/aria-hidden-focusable`, `a11y/aria-role`, `a11y/img-alt` and `a11y/heading-order`.
+- **Audit** in the panel toolbar and an *Audit accessibility* command. Commands that write, use the network or call out to another app are never run unless you tick them, exactly as in the capture matrix.
+
 ## [1.0.4] - 2026-09-17
 
 ### Fixed
@@ -34,6 +41,7 @@ All notable changes to Dev Lab are listed here. The format follows [Keep a Chang
 - **UI under every theme**: settings tab, views, ribbon icons, commands (pre-ticked when the code shows they open something without writing) and the current scene, captured under every installed theme × dark/light, tiled one theme per row; theme and scheme restored afterwards.
 - **Panel** with the target plugin, live pre-flight, commands with run buttons, surface chips, and the notes and runs list.
 
+[1.1.0]: https://github.com/Real-Fruit-Snacks/obsidian-plugin-lab/releases/tag/1.1.0
 [1.0.4]: https://github.com/Real-Fruit-Snacks/obsidian-plugin-lab/releases/tag/1.0.4
 [1.0.3]: https://github.com/Real-Fruit-Snacks/obsidian-plugin-lab/releases/tag/1.0.3
 [1.0.2]: https://github.com/Real-Fruit-Snacks/obsidian-plugin-lab/releases/tag/1.0.2

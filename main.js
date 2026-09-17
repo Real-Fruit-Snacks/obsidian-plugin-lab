@@ -18,6 +18,7 @@ const DEFAULT_SETTINGS = {
   commandPicks: {},
   ribbonPicks: {},
   cropHero: true,
+  a11y: {},            // plugin id -> last audit summary
 };
 
 const sleep = (ms) => new Promise((r) => window.setTimeout(r, ms));
@@ -61,6 +62,170 @@ function objectLiteralIsStatic(text, open, raw) {
   return values.every((v) => /^\s*(['"`]\s*['"`]|-?\d+(\.\d+)?)\s*$/.test(v));
 }
 function findAll(text, re) { const out = []; let m; const r = new RegExp(re.source, re.flags.includes('g') ? re.flags : re.flags + 'g'); while ((m = r.exec(text))) { out.push({ index: m.index, match: m[0], groups: m.slice(1) }); if (m[0].length === 0) r.lastIndex++; } return out; }
+
+// ---------- accessibility probes ----------
+// These run against the live DOM of a surface the plugin has opened, so they catch what static
+// analysis cannot: an icon button with no name, a control Tab skips, a focus ring the theme removed.
+
+const A11Y_ROLES = new Set(['alert', 'alertdialog', 'application', 'article', 'banner', 'button', 'cell', 'checkbox', 'columnheader', 'combobox', 'complementary', 'contentinfo', 'definition', 'dialog', 'directory', 'document', 'feed', 'figure', 'form', 'grid', 'gridcell', 'group', 'heading', 'img', 'link', 'list', 'listbox', 'listitem', 'log', 'main', 'marquee', 'math', 'menu', 'menubar', 'menuitem', 'menuitemcheckbox', 'menuitemradio', 'navigation', 'none', 'note', 'option', 'presentation', 'progressbar', 'radio', 'radiogroup', 'region', 'row', 'rowgroup', 'rowheader', 'scrollbar', 'search', 'searchbox', 'separator', 'slider', 'spinbutton', 'status', 'switch', 'tab', 'table', 'tablist', 'tabpanel', 'term', 'textbox', 'timer', 'toolbar', 'tooltip', 'tree', 'treegrid', 'treeitem']);
+const NATIVE_FOCUSABLE = 'a[href], button, input, select, textarea, summary, [tabindex]';
+const INTERACTIVE_SEL = 'button, a[href], input, select, textarea, [role="button"], [role="checkbox"], [role="switch"], [role="tab"], [role="menuitem"], .clickable-icon, .checkbox-container, .setting-item-control .dropdown';
+
+function a11yVisible(el) {
+  const r = el.getBoundingClientRect();
+  if (r.width < 1 || r.height < 1) return false;
+  const cs = window.getComputedStyle(el);
+  return cs.visibility !== 'hidden' && cs.display !== 'none' && Number(cs.opacity) > 0.05;
+}
+function a11yName(el) {
+  const aria = (el.getAttribute('aria-label') || '').trim();
+  if (aria) return aria;
+  const by = el.getAttribute('aria-labelledby');
+  if (by) { const t = by.split(/\s+/).map((id) => { const n = el.ownerDocument.getElementById(id); return n ? n.textContent.trim() : ''; }).join(' ').trim(); if (t) return t; }
+  const title = (el.getAttribute('title') || '').trim();
+  if (title) return title;
+  const text = (el.textContent || '').trim();
+  if (text) return text;
+  const img = el.querySelector('img[alt]');
+  if (img && img.getAttribute('alt').trim()) return img.getAttribute('alt').trim();
+  if (el.tagName === 'INPUT') {
+    const ph = (el.getAttribute('placeholder') || '').trim(); if (ph) return ph;
+    const val = (el.getAttribute('value') || '').trim(); if (val && ['button', 'submit', 'reset'].includes(el.type)) return val;
+  }
+  return '';
+}
+function a11yLabelled(el) {
+  if (a11yName(el)) return true;
+  const doc = el.ownerDocument;
+  if (el.id && doc.querySelector(`label[for="${CSS.escape(el.id)}"]`)) return true;
+  if (el.closest('label')) return true;
+  const item = el.closest('.setting-item');
+  if (item && item.querySelector('.setting-item-name')) return true;  // Obsidian's own settings pattern
+  return false;
+}
+function a11yColour(str) {
+  const m = String(str).match(/rgba?\(([^)]+)\)/);
+  if (!m) return null;
+  const p = m[1].split(/[\s,/]+/).filter(Boolean).map(Number);
+  if (p.length < 3 || p.some((x) => Number.isNaN(x))) return null;
+  return [p[0], p[1], p[2], p.length > 3 ? p[3] : 1];
+}
+function a11yLum(c) { const f = (v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); }; return 0.2126 * f(c[0]) + 0.7152 * f(c[1]) + 0.0722 * f(c[2]); }
+function a11yContrast(fg, bg) { const a = a11yLum(fg) + 0.05, b = a11yLum(bg) + 0.05; return a > b ? a / b : b / a; }
+function a11yBackdrop(el) {
+  // first ancestor with a non-transparent background, composited over white as a last resort
+  let node = el;
+  while (node && node.nodeType === 1) {
+    const c = a11yColour(window.getComputedStyle(node).backgroundColor);
+    if (c && c[3] > 0.95) return c;
+    node = node.parentElement;
+  }
+  return [255, 255, 255, 1];
+}
+function a11ySnippet(el) {
+  const t = (el.textContent || '').trim().replace(/\s+/g, ' ');
+  if (t) return t.slice(0, 40);
+  const cls = [...el.classList].slice(0, 2).join('.');
+  return el.tagName.toLowerCase() + (cls ? '.' + cls : '');
+}
+
+// One surface, one pass. Returns findings; never throws.
+function probeA11y(root, where, scheme) {
+  const out = [];
+  const add = (rule, level, text, el) => out.push({ rule, level, text, where, scheme, el: a11ySnippet(el) });
+  if (!root) return out;
+  const all = [...root.querySelectorAll('*')].filter(a11yVisible);
+
+  for (const el of root.querySelectorAll(INTERACTIVE_SEL)) {
+    if (!a11yVisible(el)) continue;
+    const tag = el.tagName.toLowerCase();
+    if (!a11yLabelled(el)) add('a11y/control-name', L.error, `${tag === 'input' || tag === 'select' || tag === 'textarea' ? 'Input' : 'Control'} with no accessible name; add aria-label or a visible label.`, el);
+    const nativelyFocusable = el.matches(NATIVE_FOCUSABLE);
+    if (!nativelyFocusable && el.getAttribute('tabindex') === null) add('a11y/control-focusable', L.error, 'Control the keyboard cannot reach; use a button or add tabindex="0" and a key handler.', el);
+    const r = el.getBoundingClientRect();
+    if (r.width < 24 || r.height < 24) add('a11y/target-size', L.warning, `Click target is ${Math.round(r.width)}×${Math.round(r.height)} px; WCAG 2.2 asks for 24×24.`, el);
+  }
+  for (const el of root.querySelectorAll('[aria-hidden="true"]')) {
+    if (el.querySelector(NATIVE_FOCUSABLE)) add('a11y/aria-hidden-focusable', L.error, 'aria-hidden container holds a focusable element; screen readers skip it but Tab does not.', el);
+  }
+  for (const el of root.querySelectorAll('[role]')) {
+    const role = (el.getAttribute('role') || '').trim().toLowerCase();
+    if (role && !A11Y_ROLES.has(role)) add('a11y/aria-role', L.warning, `Unknown ARIA role "${role}".`, el);
+  }
+  for (const el of root.querySelectorAll('img')) {
+    if (el.getAttribute('alt') === null) add('a11y/img-alt', L.warning, 'Image with no alt attribute; use alt="" if it is decorative.', el);
+  }
+  let last = 0;
+  for (const el of root.querySelectorAll('h1, h2, h3, h4, h5, h6')) {
+    const lvl = Number(el.tagName.slice(1));
+    if (last && lvl > last + 1) add('a11y/heading-order', L.info, `Heading jumps from h${last} to h${lvl}.`, el);
+    last = lvl;
+  }
+  // text contrast, on elements that actually hold text
+  const seen = new Set();
+  for (const el of all) {
+    const own = [...el.childNodes].some((n) => n.nodeType === 3 && n.textContent.trim().length > 1);
+    if (!own) continue;
+    const cs = window.getComputedStyle(el);
+    const fg = a11yColour(cs.color); if (!fg) continue;
+    const bg = a11yBackdrop(el);
+    const a = fg[3] < 1 ? [fg[0] * fg[3] + bg[0] * (1 - fg[3]), fg[1] * fg[3] + bg[1] * (1 - fg[3]), fg[2] * fg[3] + bg[2] * (1 - fg[3])] : fg;
+    const ratio = a11yContrast(a, bg);
+    const size = parseFloat(cs.fontSize) || 16;
+    const large = size >= 24 || (size >= 18.66 && Number(cs.fontWeight) >= 700);
+    const need = large ? 3 : 4.5;
+    if (ratio < need) {
+      const key = `${cs.color}|${Math.round(size)}`;
+      if (seen.has(key)) continue; seen.add(key);
+      add('a11y/text-contrast', L.warning, `Text at ${ratio.toFixed(2)}:1 against its background (${need} needed at ${Math.round(size)} px).`, el);
+    }
+  }
+  return out;
+}
+
+// Focus rings need each element focused in turn, so this is its own pass.
+function probeFocusRing(root, where, scheme) {
+  const out = [];
+  if (!root) return out;
+  const active = root.ownerDocument.activeElement;
+  const ring = (el) => { const cs = window.getComputedStyle(el); return [cs.outlineStyle, cs.outlineWidth, cs.outlineColor, cs.boxShadow, cs.borderColor, cs.backgroundColor].join('|'); };
+  const targets = [...root.querySelectorAll(NATIVE_FOCUSABLE)].filter(a11yVisible).slice(0, 25);
+  for (const el of targets) {
+    let before, after;
+    try { before = ring(el); el.focus({ preventScroll: true }); after = ring(el); } catch (e) { continue; }
+    if (before === after) out.push({ rule: 'a11y/focus-visible', level: L.warning, text: 'Focusing this control changes nothing on screen; keyboard users cannot see where they are.', where, scheme, el: a11ySnippet(el) });
+  }
+  try { if (active && active.focus) active.focus({ preventScroll: true }); } catch (e) { /* ignore */ }
+  return out;
+}
+
+function a11ySummary(findings) {
+  const c = { error: 0, warning: 0, info: 0 };
+  for (const f of findings) { if (f.level === L.error) c.error++; else if (f.level === L.warning) c.warning++; else c.info++; }
+  return c;
+}
+
+function a11yNote(plugin, findings, surfaces, schemes) {
+  const c = a11ySummary(findings);
+  const when = new Date();
+  const byRule = new Map();
+  for (const f of findings) { if (!byRule.has(f.rule)) byRule.set(f.rule, []); byRule.get(f.rule).push(f); }
+  const order = { Error: 0, Warning: 1, Info: 2 };
+  const rules = [...byRule.entries()].sort((a, b) => order[a[1][0].level] - order[b[1][0].level] || b[1].length - a[1].length);
+  const out = ['---', `plugin: ${plugin.name}`, `plugin_id: ${plugin.id}`, `date: ${when.toISOString().slice(0, 10)}`, `a11y_errors: ${c.error}`, `a11y_warnings: ${c.warning}`, `surfaces: ${surfaces}`, 'tags: [plugin-lab, accessibility]', '---', ''];
+  out.push(`# ${plugin.name} — accessibility`, '');
+  out.push(`\`${plugin.dir || plugin.id}\` · ${plugin.version} · ${when.toLocaleString()} · ${surfaces} surface${surfaces === 1 ? '' : 's'} under ${schemes.join(' and ')}`, '');
+  out.push(`> [!${c.error ? 'warning' : c.warning ? 'info' : 'success'}] Summary`, `> **${c.error}** error${c.error === 1 ? '' : 's'} · **${c.warning}** warning${c.warning === 1 ? '' : 's'} · ${c.info} note${c.info === 1 ? '' : 's'}.`, '> These are live checks against the plugin\'s own DOM, not the community review. They are advice, not a listing gate.', '');
+  if (!findings.length) { out.push('Nothing found on the surfaces that opened. Worth re-running after adding new UI.', ''); }
+  for (const [rule, items] of rules) {
+    out.push(`## ${rule}`, '', `${items[0].level} · ${items.length} occurrence${items.length === 1 ? '' : 's'}`, '', '| Where | Scheme | Element | Detail |', '|---|---|---|---|');
+    for (const f of items.slice(0, 20)) out.push(`| ${esc(f.where)} | ${f.scheme} | \`${esc(f.el)}\` | ${esc(f.text)} |`);
+    if (items.length > 20) out.push(`| … | | | ${items.length - 20} more |`);
+    out.push('');
+  }
+  out.push('## What this checks', '', '- **a11y/control-name** — an icon-only button with no `aria-label`, or an input with no label.', '- **a11y/control-focusable** — a control the keyboard cannot reach (a div with a click handler and no `tabindex`).', '- **a11y/focus-visible** — focusing a control changes nothing visible; often the theme, sometimes `outline: none` in the plugin.', '- **a11y/target-size** — a click target under 24 × 24 px (WCAG 2.2 AA).', '- **a11y/text-contrast** — text below 4.5:1 against its resolved background (3:1 for large text), under the theme in use.', '- **a11y/aria-hidden-focusable**, **a11y/aria-role**, **a11y/img-alt**, **a11y/heading-order** — the usual ARIA and structure mistakes.', '');
+  return out.join('\n');
+}
 
 // ---------- review engine ----------
 // Two sources of truth: the community review (what blocks a listing) and eslint-plugin-obsidianmd (the official linter).
@@ -511,6 +676,7 @@ class PluginLabPlugin extends Plugin {
     this.addCommand({ id: 'inventory', name: 'Write a plugin inventory (commands, settings, surfaces)', callback: () => this.pick('Inventory', (p) => this.inventory(p)) });
     this.addCommand({ id: 'matrix', name: 'Capture a plugin\'s UI under every theme', callback: () => this.pick('Capture', (p) => new MatrixModal(this.app, this, p).open()) });
     this.addCommand({ id: 'capture-one', name: 'Capture one screenshot now', callback: () => this.captureOne() });
+    this.addCommand({ id: 'audit', name: 'Audit accessibility', callback: () => this.pick('audit', (t) => this.auditA11y(t)) });
     this.addCommand({ id: 'review-all', name: 'Review every installed plugin (summary note)', callback: () => this.reviewAll() });
   }
   onunload() { /* views are detached by Obsidian; no timers, no DOM outside modals */ }
@@ -705,18 +871,81 @@ class PluginLabPlugin extends Plugin {
     await this.openNote(path);
     new Notice(`Dev Lab: ${shots.length} captures, ${sheets.length} sheets`); this.refreshPanels();
   }
-  async captureKind(p, kind, name, dir) {
+  // Opens every surface it can, in both schemes, and probes the live DOM. No screenshots.
+  async auditA11y(p) {
+    const startDark = this.isDark();
+    const kinds = await this.auditKinds(p);
+    if (!kinds.length) { new Notice('Dev Lab: no surfaces to audit for this plugin.'); return null; }
+    const schemes = this.settings.schemes.dark && this.settings.schemes.light ? [true, false] : [this.settings.schemes.light ? false : true];
+    const findings = []; const opened = new Set(); const missed = [];
+    const progress = (m) => { this.statusEl.setText(m); this.statusEl.show(); };
+    let n = 0; const total = kinds.length * schemes.length;
+    try {
+      for (const dark of schemes) {
+        if (!(await this.setScheme(dark))) continue;
+        const scheme = dark ? 'dark' : 'light';
+        for (const kind of kinds) {
+          progress(`Dev Lab: auditing ${++n}/${total}`);
+          try {
+            const got = await this.captureKind(p, kind, 'audit', null, async (nm, dr, el) => {
+              if (!el) return null;
+              await sleep(120);
+              findings.push(...probeA11y(el, kind.label, scheme), ...probeFocusRing(el, kind.label, scheme));
+              opened.add(kind.label);
+              return { ok: true };
+            });
+            if (!got) missed.push(`${kind.label} (${scheme})`);
+          } catch (e) { console.error('Dev Lab audit failed', kind, e); missed.push(`${kind.label} (${scheme}): ${e.message}`); }
+          this.closePopups(); await sleep(150);
+        }
+      }
+    } finally {
+      await this.setScheme(startDark); this.app.setting.close(); this.statusEl.hide();
+    }
+    const c = a11ySummary(findings);
+    this.settings.a11y[p.id] = { error: c.error, warning: c.warning, info: c.info, surfaces: opened.size, when: Date.now() };
+    await this.saveSettings();
+    const dir = await this.ensureFolder(this.pluginDir(p));
+    const body = a11yNote(Object.assign({}, p, { dir: p.dir }), findings, opened.size, schemes.map((d) => (d ? 'dark' : 'light')));
+    const path = await this.writeNote(`Accessibility ${stamp()}`, missed.length ? body + '\n## Surfaces that did not open\n\n' + missed.map((m) => '- ' + m).join('\n') + '\n' : body, dir);
+    await this.openNote(path);
+    new Notice(`Dev Lab: ${c.error} error${c.error === 1 ? '' : 's'} · ${c.warning} warning${c.warning === 1 ? '' : 's'} across ${opened.size} surface${opened.size === 1 ? '' : 's'}`);
+    this.refreshPanels();
+    return path;
+  }
+  // Surfaces to audit, from the plugin's own inventory: its settings tab, its views, its safe commands.
+  async auditKinds(p) {
+    const kinds = [];
+    if (this.settings.captures.settings) kinds.push({ id: 'settings', label: 'Settings tab' });
+    let inv = null;
+    try { const { files } = await loadPluginFiles(this.app, p); if (files['main.js']) inv = inventoryPlugin(this.app, p, files); } catch (e) { console.error('Dev Lab audit inventory failed', e); }
+    const declared = (this.settings.viewTypes || '').split('\n').map((x) => x.trim()).filter(Boolean);
+    const views = declared.length ? declared : (inv ? inv.viewTypes : []);
+    for (const t of views) kinds.push({ id: 'view:' + t, label: `View ${t}` });
+    const cmds = Object.values((this.app.commands && this.app.commands.commands) || {}).filter((c) => c.id.startsWith(p.id + ':'));
+    for (const c of cmds) {
+      const a = inv ? inv.analysis[c.id.slice(p.id.length + 1)] : null;
+      const picked = this.settings.commandPicks[c.id];
+      if (picked === false) continue;
+      if (picked === undefined && !commandIsSafeToSweep(a)) continue;   // never run a writer or a network call unasked
+      kinds.push({ id: 'cmd:' + c.id, label: `Command: ${c.name.replace(/^[^:]+:\s*/, '')}`, viewTypes: views, editor: !!(a && a.editor) });
+    }
+    return kinds;
+  }
+
+  async captureKind(p, kind, name, dir, probe) {
     const wait = this.settings.settleMs;
+    const shoot = probe || ((n2, d2, el, pad, o) => this.capture(n2, d2, el, pad, o));
     if (kind.id === 'settings') {
       this.app.setting.open(); this.app.setting.openTabById(p.id); await sleep(wait + 300);
       const modal = document.querySelector('.modal-container .modal');
       const tab = document.querySelector('.vertical-tab-content');
       if (!modal || !tab || !tab.textContent.trim()) { this.app.setting.close(); return null; }
-      const r = await this.capture(name, dir, modal, 16); this.app.setting.close(); await sleep(250); return r;
+      const r = await shoot(name, dir, modal, 16); this.app.setting.close(); await sleep(250); return r;
     }
     if (kind.id === 'scene') {
       this.app.setting.close(); await sleep(wait);
-      return this.capture(name, dir, null);
+      return shoot(name, dir, null);
     }
     if (kind.id.startsWith('cmd:') || kind.id.startsWith('ribbon:')) {
       await this.ensureScratchNote();
@@ -727,10 +956,10 @@ class PluginLabPlugin extends Plugin {
       else { const btn = [...document.querySelectorAll('.side-dock-ribbon-action')].find((b) => b.getAttribute('aria-label') === kind.id.slice(7)); if (!btn) return null; btn.click(); }
       await sleep(wait + 400);
       const pop = this.visiblePopup();
-      if (pop) { const r = await this.capture(name, dir, pop.el, pop.pad, { keepNotices: pop.notice }); this.closePopups(); await sleep(250); return r; }
+      if (pop) { const r = await shoot(name, dir, pop.el, pop.pad, { keepNotices: pop.notice }); this.closePopups(); await sleep(250); return r; }
       // no popup: did a view of this plugin open?
       const opened = kind.viewTypes ? kind.viewTypes.flatMap((t) => this.app.workspace.getLeavesOfType(t)) : [];
-      if (opened.length) { const el = opened[0].view.containerEl; await sleep(wait); return this.capture(name, dir, el, 12); }
+      if (opened.length) { const el = opened[0].view.containerEl; await sleep(wait); return shoot(name, dir, el, 12); }
       return null;
     }
     if (kind.id.startsWith('view:')) {
@@ -741,7 +970,7 @@ class PluginLabPlugin extends Plugin {
       const leaf = leaves[0]; try { this.app.workspace.revealLeaf(leaf); } catch (e) { /* ignore */ }
       await sleep(wait);
       const el = leaf.view && leaf.view.containerEl; if (!el || el.getBoundingClientRect().width < 20) return null;
-      return this.capture(name, dir, el, 12);
+      return shoot(name, dir, el, 12);
     }
     return null;
   }
@@ -824,6 +1053,7 @@ class PluginLabView extends obsidian.ItemView {
     tool(seg, 'Review', 'microscope', () => withTarget((t) => p.review(t)), 'Pre-flight review → note');
     tool(seg, 'Inventory', 'list-checks', () => withTarget((t) => p.inventory(t)), 'Commands, settings, surfaces → note');
     tool(seg, 'Matrix', 'layout-grid', () => withTarget((t) => new MatrixModal(p.app, p, t).open()), 'Capture UI under every theme');
+    tool(seg, 'Audit', 'accessibility', () => withTarget((t) => p.auditA11y(t)), 'Accessibility sweep of every surface');
     tool(seg, 'Capture', 'camera', () => p.captureOne(), 'Capture one screenshot now');
     tool(seg, 'All', 'clipboard-list', () => p.reviewAll(), 'Review every installed plugin');
     // sections
@@ -863,6 +1093,11 @@ class PluginLabView extends obsidian.ItemView {
     const lint = body.createDiv({ cls: 'dev-lab-verdict is-lint ' + (lintErr ? 'is-warn' : 'is-pass') });
     const ic2 = lint.createSpan({ cls: 'dev-lab-verdict-icon' }); setIcon(ic2, lintErr ? 'alert-triangle' : 'check-circle');
     lint.createSpan({ text: `Official linter: ${lintErr} error${lintErr === 1 ? '' : 's'} · ${r.counts.warning} warning${r.counts.warning === 1 ? '' : 's'}` });
+    const a = p.settings.a11y[t.id];
+    const acc = body.createDiv({ cls: 'dev-lab-verdict is-a11y ' + (a ? (a.error ? 'is-fail' : a.warning ? 'is-warn' : 'is-pass') : '') });
+    const ic3 = acc.createSpan({ cls: 'dev-lab-verdict-icon' }); setIcon(ic3, a ? (a.error ? 'x-circle' : a.warning ? 'alert-triangle' : 'check-circle') : 'accessibility');
+    acc.createSpan({ text: a ? `Accessibility: ${a.error} error${a.error === 1 ? '' : 's'} · ${a.warning} warning${a.warning === 1 ? '' : 's'} (${a.surfaces} surface${a.surfaces === 1 ? '' : 's'})` : 'Accessibility: not audited yet' });
+    if (!a) { const run = acc.createEl('button', { cls: 'dev-lab-mini-text', text: 'Run' }); run.setAttribute('aria-label', 'Audit accessibility'); run.onclick = () => p.auditA11y(t); }
     body.createDiv({ text: `${r.counts.rec} recommendations · ${r.counts.pass} passes`, cls: 'dev-lab-hint' });
     const items = r.sections.flatMap((sec) => sec.items.map((i) => Object.assign({ section: sec.name }, i))).filter((i) => i.level === L.error || i.level === L.warning || i.level === L.rec);
     const order = { Error: 0, Warning: 1, Recommendation: 2 }; items.sort((a, b) => order[a.level] - order[b.level]);

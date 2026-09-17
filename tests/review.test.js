@@ -5,7 +5,7 @@ const fs = require('fs'); const path = require('path'); const os = require('os')
 const Module = require('module'); const origLoad = Module._load;
 Module._load = function (req, ...a) { if (req === 'obsidian') return new Proxy({}, { get: () => class {} }); return origLoad.call(this, req, ...a); };
 global.document = { body: { classList: { contains: () => true } } };
-const src = fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'utf8').replace('module.exports = PluginLabPlugin;', 'module.exports = { reviewPlugin, sentenceCaseSuggestion, isSkippableString };');
+const src = fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'utf8').replace('module.exports = PluginLabPlugin;', 'module.exports = { reviewPlugin, sentenceCaseSuggestion, isSkippableString, a11yContrast, a11yColour, a11ySummary };');
 const tmp = path.join(os.tmpdir(), 'plugin-lab-review-lib.js'); fs.writeFileSync(tmp, src); const lib = require(tmp);
 
 let failed = 0; const check = (ok, msg) => { console.log((ok ? '  ok   ' : '  FAIL ') + msg); if (!ok) failed++; };
@@ -50,4 +50,14 @@ check(styleCase("el.style.removeProperty('height');") === false, 'style.removePr
 check(styleCase("el.setCssProps({ '--w': `${v}px` });") === false, 'setCssProps with a template literal interpolation is allowed');
 check(styleCase("el.setCssProps({ '--w': `12px` });") === true, 'setCssProps with a plain template literal is flagged');
 check(styleCase("el.style.color = 'red';") === true, 'style property assignment is flagged');
+
+console.log('\naccessibility helpers');
+check(Math.round(lib.a11yContrast([255, 255, 255], [0, 0, 0])) === 21, 'white on black is 21:1');
+check(lib.a11yContrast([255, 255, 255], [255, 255, 255]) === 1, 'white on white is 1:1');
+check(Math.abs(lib.a11yContrast(lib.a11yColour('rgb(119, 119, 119)'), [255, 255, 255]) - 4.48) < 0.05, '#777 on white is about 4.48:1');
+check(lib.a11yColour('rgba(0, 0, 0, 0.5)')[3] === 0.5, 'alpha is parsed');
+check(lib.a11yColour('not a colour') === null, 'a non-colour returns null');
+const sum = lib.a11ySummary([{ level: 'Error' }, { level: 'Warning' }, { level: 'Warning' }, { level: 'Info' }]);
+check(sum.error === 1 && sum.warning === 2 && sum.info === 1, 'findings are counted by level');
+
 console.log(`\n${failed ? failed + ' failure(s)' : 'all good'}`); process.exit(failed ? 1 : 0);
