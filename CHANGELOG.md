@@ -2,6 +2,13 @@
 
 All notable changes to Dev Lab are listed here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and versions follow [Semantic Versioning](https://semver.org/).
 
+## [1.1.3] - 2026-09-17
+
+### Fixed
+- `a11y/focus-visible` reported every control, because the stylesheet walk found no rules at all: since CSS nesting, a `CSSStyleRule` also carries a `cssRules` list, so the recursion branch swallowed every ordinary rule before its selector was read. The walk now reads a rule's selector and recurses into nested rules.
+- Selector lists are split on top-level commas only, so `:is(a, b):focus-visible` survives; `:not()`, `:is()` and `:where()` are kept while pseudo-elements and `:hover`/`:active` are stripped.
+- If no focus rules can be read at all, the check reports nothing rather than blaming every control.
+
 ## [1.1.2] - 2026-09-17
 
 ### Fixed
@@ -55,6 +62,7 @@ All notable changes to Dev Lab are listed here. The format follows [Keep a Chang
 - **UI under every theme**: settings tab, views, ribbon icons, commands (pre-ticked when the code shows they open something without writing) and the current scene, captured under every installed theme × dark/light, tiled one theme per row; theme and scheme restored afterwards.
 - **Panel** with the target plugin, live pre-flight, commands with run buttons, surface chips, and the notes and runs list.
 
+[1.1.3]: https://github.com/Real-Fruit-Snacks/obsidian-plugin-lab/releases/tag/1.1.3
 [1.1.2]: https://github.com/Real-Fruit-Snacks/obsidian-plugin-lab/releases/tag/1.1.2
 [1.1.1]: https://github.com/Real-Fruit-Snacks/obsidian-plugin-lab/releases/tag/1.1.1
 [1.1.0]: https://github.com/Real-Fruit-Snacks/obsidian-plugin-lab/releases/tag/1.1.0

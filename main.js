@@ -193,17 +193,33 @@ function probeA11y(root, where, scheme) {
 function focusSelectors() {
   const out = [];
   const paints = (style) => ['outline', 'outline-color', 'outline-width', 'outline-style', 'box-shadow', 'border-color', 'border', 'background-color', 'background'].some((p) => { const v = style.getPropertyValue(p); return v && v !== 'none' && v !== '0' && v !== 'initial'; });
+  // Split on top-level commas only: `:is(a, b):focus-visible` is one selector, not two
+  const parts = (sel) => {
+    const list = []; let depth = 0, cur = '';
+    for (const ch of sel) {
+      if (ch === '(' || ch === '[') depth++;
+      else if (ch === ')' || ch === ']') depth--;
+      if (ch === ',' && depth === 0) { list.push(cur); cur = ''; continue; }
+      cur += ch;
+    }
+    list.push(cur); return list;
+  };
   const walk = (rules) => {
     for (const rule of rules) {
-      if (rule.cssRules) { walk(rule.cssRules); continue; }
-      const sel = rule.selectorText;
-      if (!sel || sel.indexOf(':focus') < 0 || !rule.style || !paints(rule.style)) continue;
-      for (const part of sel.split(',')) {
-        if (part.indexOf(':focus') < 0) continue;
-        const within = part.indexOf(':focus-within') >= 0;
-        const base = part.replace(/:focus-visible|:focus-within|:focus/g, '').replace(/::?[a-z-]+\([^)]*\)/g, '').trim();
-        if (base) out.push({ base, within });
+      // a CSSStyleRule carries both a selector and, since CSS nesting, a (usually empty) cssRules list
+      if (rule.selectorText && rule.style && rule.selectorText.indexOf(':focus') >= 0 && paints(rule.style)) {
+        for (const part of parts(rule.selectorText)) {
+          if (part.indexOf(':focus') < 0) continue;
+          const within = part.indexOf(':focus-within') >= 0;
+          const base = part
+            .replace(/::[a-zA-Z-]+(\([^)]*\))?/g, '')                    // pseudo-elements
+            .replace(/:focus-visible|:focus-within|:focus/g, '')
+            .replace(/:hover|:active/g, '')
+            .trim();
+          if (base && base !== '*') out.push({ base, within });
+        }
       }
+      if (rule.cssRules && rule.cssRules.length) walk(rule.cssRules);   // media, supports, layer, nesting
     }
   };
   for (const sheet of [...document.styleSheets]) { try { walk(sheet.cssRules); } catch (e) { /* cross-origin sheet */ } }
@@ -213,6 +229,7 @@ function probeFocusRing(root, where, scheme, selectors) {
   const out = [];
   if (!root) return out;
   const sels = selectors || focusSelectors();
+  if (!sels.length) return out;   // no focus rules readable at all: report nothing rather than everything
   const sig = (el) => el.tagName.toLowerCase() + [...el.classList].slice(0, 3).map((c) => '.' + c).join('');
   const seen = new Set();
   const targets = [...root.querySelectorAll(NATIVE_FOCUSABLE)].filter((el) => a11yVisible(el) && !isCoreWidget(el) && el.getAttribute('tabindex') !== '-1');
