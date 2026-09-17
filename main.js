@@ -68,7 +68,7 @@ function findAll(text, re) { const out = []; let m; const r = new RegExp(re.sour
 // analysis cannot: an icon button with no name, a control Tab skips, a focus ring the theme removed.
 
 const A11Y_ROLES = new Set(['alert', 'alertdialog', 'application', 'article', 'banner', 'button', 'cell', 'checkbox', 'columnheader', 'combobox', 'complementary', 'contentinfo', 'definition', 'dialog', 'directory', 'document', 'feed', 'figure', 'form', 'grid', 'gridcell', 'group', 'heading', 'img', 'link', 'list', 'listbox', 'listitem', 'log', 'main', 'marquee', 'math', 'menu', 'menubar', 'menuitem', 'menuitemcheckbox', 'menuitemradio', 'navigation', 'none', 'note', 'option', 'presentation', 'progressbar', 'radio', 'radiogroup', 'region', 'row', 'rowgroup', 'rowheader', 'scrollbar', 'search', 'searchbox', 'separator', 'slider', 'spinbutton', 'status', 'switch', 'tab', 'table', 'tablist', 'tabpanel', 'term', 'textbox', 'timer', 'toolbar', 'tooltip', 'tree', 'treegrid', 'treeitem']);
-const CORE_WIDGETS = ['slider', 'checkbox-container', 'dropdown', 'setting-editor-extra-setting-button', 'vertical-tab-nav-item', 'modal-header-button', 'modal-close-button'];
+const CORE_WIDGETS = ['slider', 'checkbox-container', 'dropdown', 'setting-editor-extra-setting-button', 'vertical-tab-nav-item', 'modal-header-button', 'modal-close-button', 'setting-item'];
 const isCoreWidget = (el) => CORE_WIDGETS.some((c) => el.classList.contains(c)) || !!el.closest('.vertical-tab-header, .modal-header, .setting-item-heading');
 const NATIVE_FOCUSABLE = 'a[href], button, input, select, textarea, summary, [tabindex]';
 const INTERACTIVE_SEL = 'button, a[href], input, select, textarea, [role="button"], [role="checkbox"], [role="switch"], [role="tab"], [role="menuitem"], .clickable-icon, .checkbox-container, .setting-item-control .dropdown';
@@ -188,27 +188,42 @@ function probeA11y(root, where, scheme) {
 }
 
 // Focus rings need each element focused in turn, so this is its own pass.
-function probeFocusRing(root, where, scheme) {
+// Every selector in the loaded stylesheets that paints something on focus, reduced to a plain
+// selector we can test elements against. Read once per sweep, not per element.
+function focusSelectors() {
+  const out = [];
+  const paints = (style) => ['outline', 'outline-color', 'outline-width', 'outline-style', 'box-shadow', 'border-color', 'border', 'background-color', 'background'].some((p) => { const v = style.getPropertyValue(p); return v && v !== 'none' && v !== '0' && v !== 'initial'; });
+  const walk = (rules) => {
+    for (const rule of rules) {
+      if (rule.cssRules) { walk(rule.cssRules); continue; }
+      const sel = rule.selectorText;
+      if (!sel || sel.indexOf(':focus') < 0 || !rule.style || !paints(rule.style)) continue;
+      for (const part of sel.split(',')) {
+        if (part.indexOf(':focus') < 0) continue;
+        const within = part.indexOf(':focus-within') >= 0;
+        const base = part.replace(/:focus-visible|:focus-within|:focus/g, '').replace(/::?[a-z-]+\([^)]*\)/g, '').trim();
+        if (base) out.push({ base, within });
+      }
+    }
+  };
+  for (const sheet of [...document.styleSheets]) { try { walk(sheet.cssRules); } catch (e) { /* cross-origin sheet */ } }
+  return out;
+}
+function probeFocusRing(root, where, scheme, selectors) {
   const out = [];
   if (!root) return out;
-  const doc = root.ownerDocument;
-  const active = doc.activeElement;
-  const ring = (el) => { const cs = window.getComputedStyle(el); return [cs.outlineStyle, cs.outlineWidth, cs.outlineColor, cs.boxShadow, cs.borderColor, cs.backgroundColor].join('|'); };
-  const sig = (el) => el.tagName.toLowerCase() + '.' + [...el.classList].slice(0, 3).join('.');
+  const sels = selectors || focusSelectors();
+  const sig = (el) => el.tagName.toLowerCase() + [...el.classList].slice(0, 3).map((c) => '.' + c).join('');
   const seen = new Set();
-  const targets = [...root.querySelectorAll(NATIVE_FOCUSABLE)].filter((el) => a11yVisible(el) && !isCoreWidget(el));
+  const targets = [...root.querySelectorAll(NATIVE_FOCUSABLE)].filter((el) => a11yVisible(el) && !isCoreWidget(el) && el.getAttribute('tabindex') !== '-1');
   for (const el of targets) {
     const k = sig(el); if (seen.has(k)) continue; seen.add(k);
-    if (seen.size > 12) break;
-    let before, after;
-    try {
-      // :focus-visible only matches after a key press, so give the document one before focusing
-      doc.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab', code: 'Tab', bubbles: true }));
-      before = ring(el); el.focus({ preventScroll: true }); after = ring(el);
-    } catch (e) { continue; }
-    if (before === after) out.push({ rule: 'a11y/focus-visible', level: L.warning, text: 'Focusing this control changes nothing on screen; keyboard users cannot see where they are. Often the theme rather than the plugin — check under the default theme too.', where, scheme, el: k });
+    let covered = false;
+    for (const { base, within } of sels) {
+      try { if (within ? el.closest(base) : el.matches(base)) { covered = true; break; } } catch (e) { /* selector we cannot test */ }
+    }
+    if (!covered) out.push({ rule: 'a11y/focus-visible', level: L.warning, text: 'No `:focus` or `:focus-visible` rule in any loaded stylesheet paints this control, so keyboard focus is invisible on it. Often the theme rather than the plugin.', where, scheme, el: k });
   }
-  try { if (active && active.focus) active.focus({ preventScroll: true }); } catch (e) { /* ignore */ }
   return out;
 }
 
@@ -903,12 +918,14 @@ class PluginLabPlugin extends Plugin {
     if (!kinds.length) { new Notice('Dev Lab: no surfaces to audit for this plugin.'); return null; }
     const schemes = this.settings.schemes.dark && this.settings.schemes.light ? [true, false] : [this.settings.schemes.light ? false : true];
     const findings = []; const opened = new Set(); const missed = [];
+    let focusSel = [];
     const progress = (m) => { this.statusEl.setText(m); this.statusEl.show(); };
     let n = 0; const total = kinds.length * schemes.length;
     try {
       for (const dark of schemes) {
         if (!(await this.setScheme(dark))) continue;
         const scheme = dark ? 'dark' : 'light';
+        focusSel = focusSelectors();   // the theme's focus rules change with the scheme
         for (const kind of kinds) {
           progress(`Dev Lab: auditing ${++n}/${total}`);
           try {
@@ -917,7 +934,7 @@ class PluginLabPlugin extends Plugin {
               await sleep(120);
               // the settings dialog hands back the whole modal; audit the plugin's own tab body
               const scope = (el.classList && el.classList.contains('modal') ? el.querySelector('.vertical-tab-content') : null) || el;
-              findings.push(...probeA11y(scope, kind.label, scheme), ...probeFocusRing(scope, kind.label, scheme));
+              findings.push(...probeA11y(scope, kind.label, scheme), ...probeFocusRing(scope, kind.label, scheme, focusSel));
               opened.add(kind.label);
               return { ok: true };
             });
