@@ -2,6 +2,14 @@
 
 All notable changes to Dev Lab are listed here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and versions follow [Semantic Versioning](https://semver.org/).
 
+## [1.1.1] - 2026-09-17
+
+### Fixed
+- The accessibility audit probed the whole settings dialog, so Obsidian's own tab rail and header were reported as the plugin's problems. It now audits the plugin's tab body only.
+- Obsidian's own toggle, slider, tab rail and modal header buttons are no longer charged against the plugin for target size or control name — the author cannot resize them.
+- `a11y/focus-visible` sent no key press before focusing, so `:focus-visible` rules never matched and almost every control looked unstyled. It now sends a Tab keydown first, reports one finding per distinct control rather than one per element, and says plainly that the theme is often the cause.
+- Findings from rules that do not depend on the colour scheme are no longer listed once per scheme.
+
 ## [1.1.0] - 2026-09-17
 
 ### Added
@@ -41,6 +49,7 @@ All notable changes to Dev Lab are listed here. The format follows [Keep a Chang
 - **UI under every theme**: settings tab, views, ribbon icons, commands (pre-ticked when the code shows they open something without writing) and the current scene, captured under every installed theme × dark/light, tiled one theme per row; theme and scheme restored afterwards.
 - **Panel** with the target plugin, live pre-flight, commands with run buttons, surface chips, and the notes and runs list.
 
+[1.1.1]: https://github.com/Real-Fruit-Snacks/obsidian-plugin-lab/releases/tag/1.1.1
 [1.1.0]: https://github.com/Real-Fruit-Snacks/obsidian-plugin-lab/releases/tag/1.1.0
 [1.0.4]: https://github.com/Real-Fruit-Snacks/obsidian-plugin-lab/releases/tag/1.0.4
 [1.0.3]: https://github.com/Real-Fruit-Snacks/obsidian-plugin-lab/releases/tag/1.0.3

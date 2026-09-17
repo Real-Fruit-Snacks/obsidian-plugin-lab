@@ -68,6 +68,8 @@ function findAll(text, re) { const out = []; let m; const r = new RegExp(re.sour
 // analysis cannot: an icon button with no name, a control Tab skips, a focus ring the theme removed.
 
 const A11Y_ROLES = new Set(['alert', 'alertdialog', 'application', 'article', 'banner', 'button', 'cell', 'checkbox', 'columnheader', 'combobox', 'complementary', 'contentinfo', 'definition', 'dialog', 'directory', 'document', 'feed', 'figure', 'form', 'grid', 'gridcell', 'group', 'heading', 'img', 'link', 'list', 'listbox', 'listitem', 'log', 'main', 'marquee', 'math', 'menu', 'menubar', 'menuitem', 'menuitemcheckbox', 'menuitemradio', 'navigation', 'none', 'note', 'option', 'presentation', 'progressbar', 'radio', 'radiogroup', 'region', 'row', 'rowgroup', 'rowheader', 'scrollbar', 'search', 'searchbox', 'separator', 'slider', 'spinbutton', 'status', 'switch', 'tab', 'table', 'tablist', 'tabpanel', 'term', 'textbox', 'timer', 'toolbar', 'tooltip', 'tree', 'treegrid', 'treeitem']);
+const CORE_WIDGETS = ['slider', 'checkbox-container', 'dropdown', 'setting-editor-extra-setting-button', 'vertical-tab-nav-item', 'modal-header-button', 'modal-close-button'];
+const isCoreWidget = (el) => CORE_WIDGETS.some((c) => el.classList.contains(c)) || !!el.closest('.vertical-tab-header, .modal-header, .setting-item-heading');
 const NATIVE_FOCUSABLE = 'a[href], button, input, select, textarea, summary, [tabindex]';
 const INTERACTIVE_SEL = 'button, a[href], input, select, textarea, [role="button"], [role="checkbox"], [role="switch"], [role="tab"], [role="menuitem"], .clickable-icon, .checkbox-container, .setting-item-control .dropdown';
 
@@ -139,9 +141,11 @@ function probeA11y(root, where, scheme) {
   for (const el of root.querySelectorAll(INTERACTIVE_SEL)) {
     if (!a11yVisible(el)) continue;
     const tag = el.tagName.toLowerCase();
+    if (isCoreWidget(el)) continue;
     if (!a11yLabelled(el)) add('a11y/control-name', L.error, `${tag === 'input' || tag === 'select' || tag === 'textarea' ? 'Input' : 'Control'} with no accessible name; add aria-label or a visible label.`, el);
     const nativelyFocusable = el.matches(NATIVE_FOCUSABLE);
     if (!nativelyFocusable && el.getAttribute('tabindex') === null) add('a11y/control-focusable', L.error, 'Control the keyboard cannot reach; use a button or add tabindex="0" and a key handler.', el);
+    if (isCoreWidget(el)) continue;   // Obsidian's own toggle, slider and tab rail: not the plugin's to size
     const r = el.getBoundingClientRect();
     if (r.width < 24 || r.height < 24) add('a11y/target-size', L.warning, `Click target is ${Math.round(r.width)}×${Math.round(r.height)} px; WCAG 2.2 asks for 24×24.`, el);
   }
@@ -187,15 +191,35 @@ function probeA11y(root, where, scheme) {
 function probeFocusRing(root, where, scheme) {
   const out = [];
   if (!root) return out;
-  const active = root.ownerDocument.activeElement;
+  const doc = root.ownerDocument;
+  const active = doc.activeElement;
   const ring = (el) => { const cs = window.getComputedStyle(el); return [cs.outlineStyle, cs.outlineWidth, cs.outlineColor, cs.boxShadow, cs.borderColor, cs.backgroundColor].join('|'); };
-  const targets = [...root.querySelectorAll(NATIVE_FOCUSABLE)].filter(a11yVisible).slice(0, 25);
+  const sig = (el) => el.tagName.toLowerCase() + '.' + [...el.classList].slice(0, 3).join('.');
+  const seen = new Set();
+  const targets = [...root.querySelectorAll(NATIVE_FOCUSABLE)].filter((el) => a11yVisible(el) && !isCoreWidget(el));
   for (const el of targets) {
+    const k = sig(el); if (seen.has(k)) continue; seen.add(k);
+    if (seen.size > 12) break;
     let before, after;
-    try { before = ring(el); el.focus({ preventScroll: true }); after = ring(el); } catch (e) { continue; }
-    if (before === after) out.push({ rule: 'a11y/focus-visible', level: L.warning, text: 'Focusing this control changes nothing on screen; keyboard users cannot see where they are.', where, scheme, el: a11ySnippet(el) });
+    try {
+      // :focus-visible only matches after a key press, so give the document one before focusing
+      doc.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab', code: 'Tab', bubbles: true }));
+      before = ring(el); el.focus({ preventScroll: true }); after = ring(el);
+    } catch (e) { continue; }
+    if (before === after) out.push({ rule: 'a11y/focus-visible', level: L.warning, text: 'Focusing this control changes nothing on screen; keyboard users cannot see where they are. Often the theme rather than the plugin — check under the default theme too.', where, scheme, el: k });
   }
   try { if (active && active.focus) active.focus({ preventScroll: true }); } catch (e) { /* ignore */ }
+  return out;
+}
+
+// Only contrast depends on the scheme; everything else is the same DOM twice.
+const SCHEME_RULES = new Set(['a11y/text-contrast', 'a11y/focus-visible']);
+function a11yDedupe(findings) {
+  const seen = new Set(); const out = [];
+  for (const f of findings) {
+    const k = SCHEME_RULES.has(f.rule) ? `${f.rule}|${f.where}|${f.scheme}|${f.el}|${f.text}` : `${f.rule}|${f.where}|${f.el}|${f.text}`;
+    if (seen.has(k)) continue; seen.add(k); out.push(f);
+  }
   return out;
 }
 
@@ -218,9 +242,10 @@ function a11yNote(plugin, findings, surfaces, schemes) {
   out.push(`> [!${c.error ? 'warning' : c.warning ? 'info' : 'success'}] Summary`, `> **${c.error}** error${c.error === 1 ? '' : 's'} · **${c.warning}** warning${c.warning === 1 ? '' : 's'} · ${c.info} note${c.info === 1 ? '' : 's'}.`, '> These are live checks against the plugin\'s own DOM, not the community review. They are advice, not a listing gate.', '');
   if (!findings.length) { out.push('Nothing found on the surfaces that opened. Worth re-running after adding new UI.', ''); }
   for (const [rule, items] of rules) {
-    out.push(`## ${rule}`, '', `${items[0].level} · ${items.length} occurrence${items.length === 1 ? '' : 's'}`, '', '| Where | Scheme | Element | Detail |', '|---|---|---|---|');
-    for (const f of items.slice(0, 20)) out.push(`| ${esc(f.where)} | ${f.scheme} | \`${esc(f.el)}\` | ${esc(f.text)} |`);
-    if (items.length > 20) out.push(`| … | | | ${items.length - 20} more |`);
+    const perScheme = SCHEME_RULES.has(rule);
+    out.push(`## ${rule}`, '', `${items[0].level} · ${items.length} occurrence${items.length === 1 ? '' : 's'}`, '', perScheme ? '| Where | Scheme | Element | Detail |' : '| Where | Element | Detail |', perScheme ? '|---|---|---|---|' : '|---|---|---|');
+    for (const f of items.slice(0, 20)) out.push(perScheme ? `| ${esc(f.where)} | ${f.scheme} | \`${esc(f.el)}\` | ${esc(f.text)} |` : `| ${esc(f.where)} | \`${esc(f.el)}\` | ${esc(f.text)} |`);
+    if (items.length > 20) out.push(perScheme ? `| … | | | ${items.length - 20} more |` : `| … | | ${items.length - 20} more |`);
     out.push('');
   }
   out.push('## What this checks', '', '- **a11y/control-name** — an icon-only button with no `aria-label`, or an input with no label.', '- **a11y/control-focusable** — a control the keyboard cannot reach (a div with a click handler and no `tabindex`).', '- **a11y/focus-visible** — focusing a control changes nothing visible; often the theme, sometimes `outline: none` in the plugin.', '- **a11y/target-size** — a click target under 24 × 24 px (WCAG 2.2 AA).', '- **a11y/text-contrast** — text below 4.5:1 against its resolved background (3:1 for large text), under the theme in use.', '- **a11y/aria-hidden-focusable**, **a11y/aria-role**, **a11y/img-alt**, **a11y/heading-order** — the usual ARIA and structure mistakes.', '');
@@ -890,7 +915,9 @@ class PluginLabPlugin extends Plugin {
             const got = await this.captureKind(p, kind, 'audit', null, async (nm, dr, el) => {
               if (!el) return null;
               await sleep(120);
-              findings.push(...probeA11y(el, kind.label, scheme), ...probeFocusRing(el, kind.label, scheme));
+              // the settings dialog hands back the whole modal; audit the plugin's own tab body
+              const scope = (el.classList && el.classList.contains('modal') ? el.querySelector('.vertical-tab-content') : null) || el;
+              findings.push(...probeA11y(scope, kind.label, scheme), ...probeFocusRing(scope, kind.label, scheme));
               opened.add(kind.label);
               return { ok: true };
             });
@@ -902,6 +929,8 @@ class PluginLabPlugin extends Plugin {
     } finally {
       await this.setScheme(startDark); this.app.setting.close(); this.statusEl.hide();
     }
+    const deduped = a11yDedupe(findings);
+    findings.length = 0; findings.push(...deduped);
     const c = a11ySummary(findings);
     this.settings.a11y[p.id] = { error: c.error, warning: c.warning, info: c.info, surfaces: opened.size, when: Date.now() };
     await this.saveSettings();
