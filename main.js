@@ -3,6 +3,7 @@
 const obsidian = require('obsidian');
 const { Plugin, PluginSettingTab, Setting, Modal, SuggestModal, Notice, normalizePath, setIcon, TFile } = obsidian;
 
+const SELF_ID = 'plugin-lab';   // Dev Lab can target itself, but must never run its own commands in a sweep
 const VIEW_TYPE = 'dev-lab-panel';
 
 const DEFAULT_SETTINGS = {
@@ -764,7 +765,7 @@ class PluginLabPlugin extends Plugin {
 
   // ----- picker -----
   pick(verb, fn) {
-    const plugins = installedPlugins(this.app).filter((p) => p.id !== 'plugin-lab');
+    const plugins = installedPlugins(this.app);
     if (!plugins.length) { new Notice('Dev Lab: no community plugins installed'); return; }
     new PluginPicker(this.app, this, plugins, verb, async (p) => { this.settings.lastPlugin = p.id; await this.saveSettings(); this.refreshPanels(); await fn(p); }).open();
   }
@@ -932,10 +933,11 @@ class PluginLabPlugin extends Plugin {
   async auditA11y(p) {
     const startDark = this.isDark();
     const kinds = await this.auditKinds(p);
+    if (p.id === SELF_ID) missedSelf = true;
     if (!kinds.length) { new Notice('Dev Lab: no surfaces to audit for this plugin.'); return null; }
     const schemes = this.settings.schemes.dark && this.settings.schemes.light ? [true, false] : [this.settings.schemes.light ? false : true];
     const findings = []; const opened = new Set(); const missed = [];
-    let focusSel = [];
+    let focusSel = []; let missedSelf = false;
     const progress = (m) => { this.statusEl.setText(m); this.statusEl.show(); };
     let n = 0; const total = kinds.length * schemes.length;
     try {
@@ -970,7 +972,8 @@ class PluginLabPlugin extends Plugin {
     await this.saveSettings();
     const dir = await this.ensureFolder(this.pluginDir(p));
     const body = a11yNote(Object.assign({}, p, { dir: p.dir }), findings, opened.size, schemes.map((d) => (d ? 'dark' : 'light')));
-    const path = await this.writeNote(`Accessibility ${stamp()}`, missed.length ? body + '\n## Surfaces that did not open\n\n' + missed.map((m) => '- ' + m).join('\n') + '\n' : body, dir);
+    const tail = missedSelf ? '\n> [!note] Dev Lab does not run its own commands in a sweep, so only its settings tab and panel are audited here.\n' : '';
+    const path = await this.writeNote(`Accessibility ${stamp()}`, tail + (missed.length ? body + '\n## Surfaces that did not open\n\n' + missed.map((m) => '- ' + m).join('\n') + '\n' : body), dir);
     await this.openNote(path);
     new Notice(`Dev Lab: ${c.error} error${c.error === 1 ? '' : 's'} · ${c.warning} warning${c.warning === 1 ? '' : 's'} across ${opened.size} surface${opened.size === 1 ? '' : 's'}`);
     this.refreshPanels();
@@ -985,7 +988,7 @@ class PluginLabPlugin extends Plugin {
     const declared = (this.settings.viewTypes || '').split('\n').map((x) => x.trim()).filter(Boolean);
     const views = declared.length ? declared : (inv ? inv.viewTypes : []);
     for (const t of views) kinds.push({ id: 'view:' + t, label: `View ${t}` });
-    const cmds = Object.values((this.app.commands && this.app.commands.commands) || {}).filter((c) => c.id.startsWith(p.id + ':'));
+    const cmds = p.id === SELF_ID ? [] : Object.values((this.app.commands && this.app.commands.commands) || {}).filter((c) => c.id.startsWith(p.id + ':'));
     for (const c of cmds) {
       const a = inv ? inv.analysis[c.id.slice(p.id.length + 1)] : null;
       const picked = this.settings.commandPicks[c.id];
@@ -1253,11 +1256,12 @@ class MatrixModal extends Modal {
     group('Schemes', null, [{ key: 'dark', label: 'Dark' }, { key: 'light', label: 'Light' }], (k) => s.schemes[k], (k, v) => { s.schemes[k] = v; });
     const inv = this._inv || null;
     group('Surfaces', 'What to capture under each theme', [{ key: 'settings', label: 'Settings tab' }, { key: 'views', label: 'Registered views (below)' }, { key: 'scene', label: 'The scene as it is now' }], (k) => s.captures[k], (k, v) => { s.captures[k] = v; });
-    const cmds = Object.values((this.app.commands && this.app.commands.commands) || {}).filter((c) => c.id.startsWith(this.target.id + ':'));
+    const cmds = this.target.id === SELF_ID ? [] : Object.values((this.app.commands && this.app.commands.commands) || {}).filter((c) => c.id.startsWith(this.target.id + ':'));
     s.commandPicks = s.commandPicks || {};
     const an = this._analysis || {};
     if (cmds.length && this._analysis && !s.commandPicks['__seeded:' + this.target.id]) { for (const c of cmds) { const a = an[c.id.slice(this.target.id.length + 1)]; if (commandIsSafeToSweep(a)) s.commandPicks[c.id] = true; } s.commandPicks['__seeded:' + this.target.id] = true; }
     if (cmds.length) group('Commands', 'Read from main.js: what each one does. Dialog- and view-openers that don\'t write are pre-ticked; the rest run for real, so tick them knowingly.', cmds.map((c) => { const d = describeCommand(an[c.id.slice(this.target.id.length + 1)]); return { key: c.id, label: c.name.replace(/^[^:]+:\s*/, '') + (d ? ` — ${d}` : '') }; }), (k) => !!s.commandPicks[k], (k, v) => { s.commandPicks[k] = v; }, true);
+    else if (this.target.id === SELF_ID) contentEl.createEl('p', { text: 'Dev Lab does not run its own commands in a sweep — its settings tab and panel are captured, nothing else.', cls: 'dev-lab-hint' });
     else if (!this.target.enabled) contentEl.createEl('p', { text: 'Enable the plugin to sweep its commands and ribbon icons.', cls: 'dev-lab-hint' });
     const ribbons = [...document.querySelectorAll('.side-dock-ribbon-action')].map((b) => b.getAttribute('aria-label')).filter((l) => l && (this._detectedRibbons || []).includes(l));
     s.ribbonPicks = s.ribbonPicks || {};

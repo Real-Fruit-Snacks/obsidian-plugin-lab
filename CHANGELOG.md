@@ -2,6 +2,11 @@
 
 All notable changes to Dev Lab are listed here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and versions follow [Semantic Versioning](https://semver.org/).
 
+## [1.1.4] - 2026-09-17
+
+### Changed
+- Dev Lab can now be picked as its own target, so you can review, inventory and audit it like any other plugin. It still never runs its own commands in a sweep — an audit that executed *Audit accessibility* would recurse — so for itself only the settings tab and the panel are opened, and the note says so.
+
 ## [1.1.3] - 2026-09-17
 
 ### Fixed
@@ -62,6 +67,7 @@ All notable changes to Dev Lab are listed here. The format follows [Keep a Chang
 - **UI under every theme**: settings tab, views, ribbon icons, commands (pre-ticked when the code shows they open something without writing) and the current scene, captured under every installed theme × dark/light, tiled one theme per row; theme and scheme restored afterwards.
 - **Panel** with the target plugin, live pre-flight, commands with run buttons, surface chips, and the notes and runs list.
 
+[1.1.4]: https://github.com/Real-Fruit-Snacks/obsidian-plugin-lab/releases/tag/1.1.4
 [1.1.3]: https://github.com/Real-Fruit-Snacks/obsidian-plugin-lab/releases/tag/1.1.3
 [1.1.2]: https://github.com/Real-Fruit-Snacks/obsidian-plugin-lab/releases/tag/1.1.2
 [1.1.1]: https://github.com/Real-Fruit-Snacks/obsidian-plugin-lab/releases/tag/1.1.1
