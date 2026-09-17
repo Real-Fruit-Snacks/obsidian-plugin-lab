@@ -47,5 +47,7 @@ check(styleCase("el.setCssProps({ '--x': v + 'px' });") === false, 'setCssProps 
 check(styleCase("el.setCssStyles({ height: h });") === false, 'setCssStyles with a variable is allowed');
 check(styleCase("el.setCssProps({ color: 'red' });") === true, 'setCssProps with only static values is flagged');
 check(styleCase("el.style.removeProperty('height');") === false, 'style.removeProperty is allowed');
+check(styleCase("el.setCssProps({ '--w': `${v}px` });") === false, 'setCssProps with a template literal interpolation is allowed');
+check(styleCase("el.setCssProps({ '--w': `12px` });") === true, 'setCssProps with a plain template literal is flagged');
 check(styleCase("el.style.color = 'red';") === true, 'style property assignment is flagged');
 console.log(`\n${failed ? failed + ' failure(s)' : 'all good'}`); process.exit(failed ? 1 : 0);

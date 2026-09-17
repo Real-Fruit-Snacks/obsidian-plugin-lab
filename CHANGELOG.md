@@ -2,6 +2,17 @@
 
 All notable changes to Dev Lab are listed here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and versions follow [Semantic Versioning](https://semver.org/).
 
+## [1.0.4] - 2026-09-17
+
+### Fixed
+- Inventory no longer drops a setting whose description and handlers run past 400 characters; each setting is read up to the next `new Setting(`.
+- Inventory renders `${…}` in template-literal names and descriptions as an ellipsis instead of raw source.
+
+## [1.0.3] - 2026-09-17
+
+### Fixed
+- `no-static-styles-assignment`: a `setCssProps` value written as a template literal with `${…}` is dynamic and is no longer flagged.
+
 ## [1.0.2] - 2026-09-13
 
 ### Fixed
@@ -23,6 +34,8 @@ All notable changes to Dev Lab are listed here. The format follows [Keep a Chang
 - **UI under every theme**: settings tab, views, ribbon icons, commands (pre-ticked when the code shows they open something without writing) and the current scene, captured under every installed theme × dark/light, tiled one theme per row; theme and scheme restored afterwards.
 - **Panel** with the target plugin, live pre-flight, commands with run buttons, surface chips, and the notes and runs list.
 
+[1.0.4]: https://github.com/Real-Fruit-Snacks/obsidian-plugin-lab/releases/tag/1.0.4
+[1.0.3]: https://github.com/Real-Fruit-Snacks/obsidian-plugin-lab/releases/tag/1.0.3
 [1.0.2]: https://github.com/Real-Fruit-Snacks/obsidian-plugin-lab/releases/tag/1.0.2
 [1.0.1]: https://github.com/Real-Fruit-Snacks/obsidian-plugin-lab/releases/tag/1.0.1
 [1.0.0]: https://github.com/Real-Fruit-Snacks/obsidian-plugin-lab/releases/tag/1.0.0

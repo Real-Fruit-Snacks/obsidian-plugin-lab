@@ -49,13 +49,15 @@ function extractStrings(js, callName) {
   while ((m = re.exec(js))) out.push({ text: m[2], index: m.index });
   return out;
 }
-function objectLiteralIsStatic(text, open) {
-  // text is masked code (string contents blanked, quotes kept); open is the index of '{'
+function objectLiteralIsStatic(text, open, raw) {
+  // text is masked code (string contents blanked, quotes kept); raw is the same code with strings kept; open is the index of '{'
+  // a template literal with an interpolation is dynamic, and only the raw code shows the ${
   let depth = 0, i = open; for (; i < text.length; i++) { const c = text[i]; if (c === '{' || c === '(' || c === '[') depth++; else if (c === '}' || c === ')' || c === ']') { depth--; if (depth === 0) break; } }
   const body = text.slice(open + 1, i); if (!body.trim()) return false;
   const values = []; let cur = '', d = 0, seenColon = false;
   for (const c of body) { if (c === '{' || c === '(' || c === '[') d++; else if (c === '}' || c === ')' || c === ']') d--; if (d === 0 && c === ',') { values.push(cur); cur = ''; seenColon = false; continue; } if (d === 0 && c === ':' && !seenColon) { seenColon = true; cur = ''; continue; } if (seenColon) cur += c; }
   values.push(cur);
+  if (raw) { const rawBody = raw.slice(open + 1, i); if (/`[^`]*\$\{/.test(rawBody)) return false; }
   return values.every((v) => /^\s*(['"`]\s*['"`]|-?\d+(\.\d+)?)\s*$/.test(v));
 }
 function findAll(text, re) { const out = []; let m; const r = new RegExp(re.source, re.flags.includes('g') ? re.flags : re.flags + 'g'); while ((m = r.exec(text))) { out.push({ index: m.index, match: m[0], groups: m.slice(1) }); if (m[0].length === 0) r.lastIndex++; } return out; }
@@ -226,7 +228,7 @@ function reviewPlugin(manifestFromApp, files) {
     const inner = findAll(bare, /\.(innerHTML|outerHTML)\s*=|insertAdjacentHTML\s*\(/); if (inner.length) a(L.warning, `innerHTML/outerHTML/insertAdjacentHTML assignment (${inner.length}). Build DOM with createEl/createDiv/createSpan.`, Object.assign({ rule: 'review/behavior', help: 'Plugin guidelines: avoid innerHTML. Reviewers have rejected plugins for it.' }, first(inner)));
     const forb = findAll(code, /(createEl|createElement)\(\s*['"](style|link)['"]/); if (forb.length) a(L.error, `Creating and attaching "${forb[0].match.match(/['"](\w+)['"]/)[1]}" elements is not allowed. For CSS use styles.css.`, Object.assign({ rule: 'obsidianmd/no-forbidden-elements' }, first(forb)));
     // setCssProps/setCssStyles are the linter's recommended form for dynamic values; only a literal with nothing but static values is flagged
-    const styl = findAll(bare, /\.style\.[a-zA-Z]+\s*=[^=]|\.style\.setProperty\(|setAttribute\(\s*['"]style['"]/).concat(findAll(bare, /setCss(?:Props|Styles)\(\s*\{/).filter((m) => objectLiteralIsStatic(bare, m.index + m.match.length - 1))); styl.sort((x, y) => x.index - y.index); if (styl.length) a(L.error, `Sets styles directly on elements (${styl.length}×); use CSS classes in styles.css.`, Object.assign({ rule: 'obsidianmd/no-static-styles-assignment' }, first(styl)));
+    const styl = findAll(bare, /\.style\.[a-zA-Z]+\s*=[^=]|\.style\.setProperty\(|setAttribute\(\s*['"]style['"]/).concat(findAll(bare, /setCss(?:Props|Styles)\(\s*\{/).filter((m) => objectLiteralIsStatic(bare, m.index + m.match.length - 1, code))); styl.sort((x, y) => x.index - y.index); if (styl.length) a(L.error, `Sets styles directly on elements (${styl.length}×); use CSS classes in styles.css.`, Object.assign({ rule: 'obsidianmd/no-static-styles-assignment' }, first(styl)));
     const nav = findAll(bare, /\bnavigator\.(platform|userAgent|appVersion|vendor)\b/); if (nav.length) a(L.error, 'Uses navigator for OS detection; use `Platform` from the Obsidian API.', Object.assign({ rule: 'obsidianmd/platform' }, first(nav)));
     const sample = [...findAll(code, /console\.log\(\s*['"]setInterval['"]\s*\)/), ...findAll(code, /console\.log\(\s*['"]click['"]/)]; if (sample.length) a(L.error, 'Sample code from the plugin template is still present (the demo registerInterval / registerDomEvent).', Object.assign({ rule: 'obsidianmd/no-sample-code' }, first(sample)));
     const sn = findAll(bare, new RegExp('\\b(class|function)\\s+(' + SAMPLE_NAMES.join('|') + ')\\b|\\b(' + SAMPLE_NAMES.join('|') + ')\\s*[:=]')); if (sn.length) a(L.error, 'Rename the sample classes (MyPlugin, SampleSettingTab, SampleModal, MyPluginSettings, mySetting).', Object.assign({ rule: 'obsidianmd/sample-names' }, first(sn)));
@@ -438,13 +440,17 @@ function inventoryPlugin(app, plugin, files) {
   const extensions = findAll(js, /registerExtensions\(\s*\[([^\]]*)\]/).map((h) => h.groups[0].replace(/['"`\s]/g, ''));
   const fileMenu = /['"]file-menu['"]/.test(js), editorMenu = /['"]editor-menu['"]/.test(js);
   // settings, in source order, with headings
-  const settings = []; const re = /\.setName\(\s*(['"`])((?:\\.|(?!\1).)*)\1\s*\)([\s\S]{0,400}?)(?=new\s+Setting\(|$)/g; let mm;
+  // Each setting's tail runs to the next `new Setting(`, however long its description and handlers are.
+  const settings = []; const re = /\.setName\(\s*(['"`])((?:\\.|(?!\1).)*)\1\s*\)/g; let mm;
+  const nextSetting = /new\s+Setting\(/g;
   while ((mm = re.exec(js))) {
-    const tail = mm[3];
+    nextSetting.lastIndex = re.lastIndex; const nx = nextSetting.exec(js);
+    const tail = js.slice(re.lastIndex, nx ? nx.index : Math.min(js.length, re.lastIndex + 2000));
     const isHeading = /\.setHeading\(\)/.test(tail);
     const type = isHeading ? 'heading' : /addToggle/.test(tail) ? 'toggle' : /addDropdown/.test(tail) ? 'dropdown' : /addSlider/.test(tail) ? 'slider' : /addTextArea/.test(tail) ? 'text area' : /addText/.test(tail) ? 'text' : /addButton/.test(tail) ? 'button' : /addExtraButton/.test(tail) ? 'icon button' : /addColorPicker/.test(tail) ? 'colour' : /addMomentFormat/.test(tail) ? 'date format' : /addSearch/.test(tail) ? 'search' : /addProgressBar/.test(tail) ? 'progress' : '';
     const descM = tail.match(/\.setDesc\(\s*(['"`])((?:\\.|(?!\1).)*)\1/);
-    settings.push({ name: mm[2], type, desc: descM ? descM[2] : '', heading: isHeading });
+    const cleanText = (t) => t.replace(/\$\{[^}]*\}/g, '…').replace(/\\(['"`])/g, '$1');
+    settings.push({ name: cleanText(mm[2]), type, desc: descM ? cleanText(descM[2]) : '', heading: isHeading });
   }
   let data = null; try { data = files['data.json'] ? JSON.parse(files['data.json']) : null; } catch (e) { data = null; }
   const modals = findAll(js, /class\s+(\w+)\s+extends\s+(?:\w+\.)?(Modal|SuggestModal|FuzzySuggestModal|PopoverSuggest|EditorSuggest|AbstractInputSuggest)\b/).map((h) => ({ name: h.groups[0], base: h.groups[1] }));
