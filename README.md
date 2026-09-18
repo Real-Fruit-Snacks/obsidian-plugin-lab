@@ -29,9 +29,11 @@ The engine masks comments, regex literals and string contents before scanning, s
 
 ### Accessibility audit
 
-The review reads the code; the audit watches what the code renders. **Audit** opens the plugin's settings tab, its registered views and its safe commands — in dark and light — and probes the DOM that appears: an icon-only button with no accessible name, a control the keyboard cannot reach, a focus ring that never becomes visible, a click target under 24 × 24 px, text below 4.5:1 against its resolved background under the theme you're running, plus the usual ARIA and structure mistakes.
+The review reads the code; the audit watches what the code renders. **Audit** opens the plugin's settings tab, its registered views and its safe commands — in dark and light — and probes the DOM that appears: an icon-only button with no accessible name, a control the keyboard cannot reach, a control no `:focus` rule in any loaded stylesheet paints, a click target under 24 × 24 px, text below 4.5:1 against its resolved background under the theme you're running, plus the usual ARIA and structure mistakes.
 
 It writes a note grouped by rule, each row naming the surface, the scheme and the element. The panel carries the result as a third verdict row beside the two review verdicts. It is advice, not a listing gate — the community review does not check any of this, which is rather the point.
+
+Obsidian's own toggles, sliders and tab rail are never charged to the plugin, and the focus check reads the loaded stylesheets rather than focusing controls, since `:focus-visible` does not match programmatic focus. Dev Lab can audit itself; it just never runs its own commands in a sweep, so for itself only the settings tab and panel are opened.
 
 ### Inventory
 
@@ -49,7 +51,7 @@ The matrix dialog lists your installed themes (plus the default), dark and light
 
 ### The panel
 
-A right-sidebar panel with the target plugin, the five tools, a live pre-flight (re-checked on demand, without writing anything), the accessibility verdict, the plugin's commands with a run button, its surfaces as chips that open them, and its review, inventory and matrix notes.
+A right-sidebar panel with the target plugin, the six tools, a live pre-flight (re-checked on demand, without writing anything), the accessibility verdict, the plugin's commands with a run button, its surfaces as chips that open them, and its review, inventory and matrix notes.
 
 ## Install
 
