@@ -32,6 +32,12 @@
   .verdict p { margin:0; color:var(--text-2); font-size:14.5px; }
   @media (max-width:860px){ .shots-3, .verdicts { grid-template-columns:1fr; } }
 </style>
+<style>
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+.hero.is-cover { padding: 56px 0 44px; }
+.hero.is-cover .cover { margin: 20px auto 26px; max-width: 1040px; }
+.hero.is-cover .cover img { width: 100%; border-radius: 16px; border: 1px solid var(--line); display: block; }
+</style>
 </head>
 <body>
 <div class="wrap">
@@ -47,15 +53,14 @@
     </nav>
   </header>
 
-  <div class="hero">
+  <div class="hero is-cover">
     <div class="pill"><b>New in 1.1</b> accessibility audit — a third verdict, from the live DOM</div>
-    <h1>Ship a plugin that passes review the first time.</h1>
-    <p class="lede">Dev Lab reads an installed plugin and tells you what the community review will say and what the official linter would flag — rule id, file, line. Then it inventories the plugin and captures its UI under every theme you have.</p>
+    <h1 class="sr-only">Dev Lab — ship a plugin that passes review. Three verdicts on one panel.</h1>
+    <div class="cover"><img src="assets/cover.png" alt="Dev Lab: ship a plugin that passes review — community review, official linter and accessibility on one panel"></div>
     <div class="actions">
       <a class="btn primary" href="#install">Install Dev Lab</a>
       <a class="btn secondary" href="https://github.com/Real-Fruit-Snacks/obsidian-plugin-lab">View source</a>
     </div>
-    <div class="frame"><img src="assets/hero.png" alt="Dev Lab: the panel reviewing a plugin, its inventory note, and a dialog captured under a theme in both schemes"></div>
   </div>
 
   <section id="features">

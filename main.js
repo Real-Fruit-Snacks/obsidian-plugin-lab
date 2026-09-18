@@ -1332,3 +1332,4 @@ class PluginLabSettingTab extends PluginSettingTab {
 module.exports = PluginLabPlugin;
 
 /* nosourcemap */
+/* nosourcemap */
