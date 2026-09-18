@@ -51,6 +51,14 @@ check(styleCase("el.setCssProps({ '--w': `${v}px` });") === false, 'setCssProps 
 check(styleCase("el.setCssProps({ '--w': `12px` });") === true, 'setCssProps with a plain template literal is flagged');
 check(styleCase("el.style.color = 'red';") === true, 'style property assignment is flagged');
 
+console.log('\nlicence years');
+const lic = (text) => lib.reviewPlugin({ id: 'x', name: 'X', version: '1.0.0', description: 'A plugin that does something useful.' }, { 'main.js': 'const { Plugin } = require("obsidian"); class P extends Plugin {} module.exports = P;', 'styles.css': '', 'README.md': null, 'versions.json': '{"1.0.0":"1.4.0"}', 'data.json': null, 'LICENSE': text }).sections.flatMap((s) => s.items).some((i) => /Copyright year/.test(i.text));
+const yr = new Date().getFullYear();
+check(lic(`Copyright (c) 2024-${yr} Someone`) === false, 'a range ending this year is fine');
+check(lic(`Copyright (c) ${yr} Someone`) === false, 'this year is fine');
+check(lic('Copyright (c) 2019 Someone') === true, 'a stale single year is flagged');
+check(lic(`Copyright (c) 2019-${yr - 5} Someone`) === true, 'a range ending long ago is flagged');
+
 console.log('\naccessibility helpers');
 check(Math.round(lib.a11yContrast([255, 255, 255], [0, 0, 0])) === 21, 'white on black is 21:1');
 check(lib.a11yContrast([255, 255, 255], [255, 255, 255]) === 1, 'white on white is 1:1');

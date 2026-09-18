@@ -2,6 +2,11 @@
 
 All notable changes to Dev Lab are listed here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and versions follow [Semantic Versioning](https://semver.org/).
 
+## [1.1.9] - 2026-09-17
+
+### Fixed
+- `obsidianmd/validate-license` read only the first year, so `Copyright (c) 2024-2026` was reported as 2024. It now reads the end of a range.
+
 ## [1.1.8] - 2026-09-17
 
 ### Fixed
@@ -89,6 +94,7 @@ All notable changes to Dev Lab are listed here. The format follows [Keep a Chang
 - **UI under every theme**: settings tab, views, ribbon icons, commands (pre-ticked when the code shows they open something without writing) and the current scene, captured under every installed theme × dark/light, tiled one theme per row; theme and scheme restored afterwards.
 - **Panel** with the target plugin, live pre-flight, commands with run buttons, surface chips, and the notes and runs list.
 
+[1.1.9]: https://github.com/Real-Fruit-Snacks/obsidian-plugin-lab/releases/tag/1.1.9
 [1.1.8]: https://github.com/Real-Fruit-Snacks/obsidian-plugin-lab/releases/tag/1.1.8
 [1.1.7]: https://github.com/Real-Fruit-Snacks/obsidian-plugin-lab/releases/tag/1.1.7
 [1.1.6]: https://github.com/Real-Fruit-Snacks/obsidian-plugin-lab/releases/tag/1.1.6

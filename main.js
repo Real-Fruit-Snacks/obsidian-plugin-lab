@@ -418,7 +418,7 @@ function reviewPlugin(manifestFromApp, files) {
         else a(L.pass, `versions.json maps ${m.version} → ${m.minAppVersion}.`, { rule: 'review/releases' });
       } catch (e) { a(L.error, `versions.json is not valid JSON: ${e.message}`, { file: 'versions.json', rule: 'review/releases' }); }
     } else a(L.info, 'No versions.json here (normal for an installed copy; required in the repository).', { rule: 'review/releases' });
-    if (files['LICENSE']) { if (/Dynalist Inc\./.test(files['LICENSE'])) a(L.warning, 'Please change the copyright holder from "Dynalist Inc." to your name.', { file: 'LICENSE', rule: 'obsidianmd/validate-license' }); const y = files['LICENSE'].match(/\(c\)\s*(\d{4})/i); if (y && Number(y[1]) < new Date().getFullYear() - 1) a(L.rec, `Copyright year is ${y[1]}.`, { file: 'LICENSE', rule: 'obsidianmd/validate-license' }); }
+    if (files['LICENSE']) { if (/Dynalist Inc\./.test(files['LICENSE'])) a(L.warning, 'Please change the copyright holder from "Dynalist Inc." to your name.', { file: 'LICENSE', rule: 'obsidianmd/validate-license' }); const y = files['LICENSE'].match(/\(c\)\s*(\d{4})(?:\s*[-–]\s*(\d{4}))?/i); const last = y ? Number(y[2] || y[1]) : 0; if (y && last < new Date().getFullYear() - 1) a(L.rec, `Copyright year is ${y[2] ? y[1] + '-' + y[2] : y[1]}.`, { file: 'LICENSE', rule: 'obsidianmd/validate-license' }); }
     if (readme === null) a(L.info, 'No README.md here (normal for an installed copy; the directory renders the repository\'s README as the plugin page).', { rule: 'review/releases' });
     else {
       if (readme.length < 400) a(L.warning, `README.md is only ${readme.length} characters; it is the plugin page.`, { file: 'README.md', rule: 'review/readme' });
