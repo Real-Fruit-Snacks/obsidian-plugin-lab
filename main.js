@@ -933,11 +933,10 @@ class PluginLabPlugin extends Plugin {
   async auditA11y(p) {
     const startDark = this.isDark();
     const kinds = await this.auditKinds(p);
-    if (p.id === SELF_ID) missedSelf = true;
     if (!kinds.length) { new Notice('Dev Lab: no surfaces to audit for this plugin.'); return null; }
     const schemes = this.settings.schemes.dark && this.settings.schemes.light ? [true, false] : [this.settings.schemes.light ? false : true];
     const findings = []; const opened = new Set(); const missed = [];
-    let focusSel = []; let missedSelf = false;
+    let focusSel = []; const missedSelf = p.id === SELF_ID;
     const progress = (m) => { this.statusEl.setText(m); this.statusEl.show(); };
     let n = 0; const total = kinds.length * schemes.length;
     try {
@@ -986,7 +985,7 @@ class PluginLabPlugin extends Plugin {
     let inv = null;
     try { const { files } = await loadPluginFiles(this.app, p); if (files['main.js']) inv = inventoryPlugin(this.app, p, files); } catch (e) { console.error('Dev Lab audit inventory failed', e); }
     const declared = (this.settings.viewTypes || '').split('\n').map((x) => x.trim()).filter(Boolean);
-    const views = declared.length ? declared : (inv ? inv.viewTypes : []);
+    const views = [...new Set(declared.length ? declared : [...(inv ? inv.viewTypes : []), ...(p.id === SELF_ID ? [VIEW_TYPE] : [])])];
     for (const t of views) kinds.push({ id: 'view:' + t, label: `View ${t}` });
     const cmds = p.id === SELF_ID ? [] : Object.values((this.app.commands && this.app.commands.commands) || {}).filter((c) => c.id.startsWith(p.id + ':'));
     for (const c of cmds) {
