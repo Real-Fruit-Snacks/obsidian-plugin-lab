@@ -45,7 +45,7 @@
 .dev-lab-head-name { display: flex; align-items: center; gap: 8px; font-size: var(--font-ui-medium); font-weight: var(--font-semibold); color: var(--text-normal); }
 .dev-lab-head-meta { font-family: var(--font-monospace); font-size: var(--font-ui-smaller); color: var(--text-muted); margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .dev-lab-badge { font-size: var(--font-ui-smaller); font-weight: var(--font-medium); padding: 0 7px; border-radius: var(--radius-s); border: 1px solid var(--background-modifier-border); color: var(--text-faint); background: var(--background-secondary-alt); }
-.dev-lab-badge.is-on { color: var(--text-success); border-color: color-mix(in srgb, var(--text-success) 40%, transparent); }
+.dev-lab-badge.is-on { color: color-mix(in srgb, var(--text-success) 78%, var(--text-normal)); border-color: color-mix(in srgb, var(--text-success) 40%, transparent); }
 .dev-lab-tools { display: flex; flex-direction: column; gap: 6px; margin-bottom: var(--size-4-2); }
 .dev-lab-seg { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 2px; padding: 2px; border-radius: var(--radius-m); background: var(--background-secondary-alt); border: 1px solid var(--background-modifier-border); }
 .dev-lab-panel .dev-lab-seg .dev-lab-tool,
@@ -53,7 +53,7 @@
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
   width: 100%; min-width: 0; height: auto; min-height: 0; margin: 0; padding: 6px 2px 5px;
   box-shadow: none; border: 0; outline: 0; border-radius: var(--radius-s);
-  background-color: transparent; background-image: none; color: var(--text-muted);
+  background-color: transparent; background-image: none; color: color-mix(in srgb, var(--text-muted) 70%, var(--text-normal));
   font-size: var(--font-ui-smaller); font-weight: var(--font-normal); line-height: 1; letter-spacing: normal;
   transform: none; translate: none; scale: none; transition: background-color 80ms ease, color 80ms ease; cursor: var(--cursor);
 }
@@ -71,10 +71,10 @@
 .dev-lab-section.is-collapsed .dev-lab-section-body { display: none; }
 .dev-lab-section-right { display: flex; align-items: center; gap: 8px; }
 .dev-lab-section-body { padding: 0 0 var(--size-4-3); }
-.dev-lab-mini { display: inline-flex; align-items: center; gap: 4px; padding: 2px 4px; height: auto; box-shadow: none; border: 0; background: transparent; color: var(--text-muted); border-radius: var(--radius-s); font-size: var(--font-ui-smaller); }
+.dev-lab-mini { display: inline-flex; align-items: center; justify-content: center; gap: 4px; padding: 2px 4px; min-width: 24px; min-height: 24px; height: auto; box-shadow: none; border: 0; background: transparent; color: var(--text-muted); border-radius: var(--radius-s); font-size: var(--font-ui-smaller); }
 .dev-lab-mini:hover { background: var(--background-modifier-hover); color: var(--text-normal); }
 .dev-lab-mini .svg-icon { width: 14px; height: 14px; }
-.dev-lab-mini-text { padding: 2px 6px; }
+.dev-lab-mini-text { padding: 2px 8px; min-height: 24px; }
 .dev-lab-hint { color: var(--text-muted); font-size: var(--font-ui-smaller); margin: 0 0 8px; line-height: 1.45; }
 .dev-lab-verdict { display: flex; align-items: center; gap: 8px; font-weight: var(--font-medium); padding: 8px 10px; border-radius: var(--radius-m); border: 1px solid var(--background-modifier-border); margin-bottom: 6px; }
 .dev-lab-verdict-icon { display: flex; } .dev-lab-verdict-icon .svg-icon { width: 16px; height: 16px; }
@@ -89,16 +89,17 @@
 .dev-lab-item.is-warning .dev-lab-item-mark { color: var(--text-warning); }
 .dev-lab-item.is-recommendation .dev-lab-item-mark { color: var(--text-muted); }
 .dev-lab-item-text { color: var(--text-normal); }
-.dev-lab-item-where { font-family: var(--font-monospace); color: var(--text-faint); margin-top: 1px; }
+.dev-lab-item-where { font-family: var(--font-monospace); color: var(--text-muted); margin-top: 1px; }
 .dev-lab-foot { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 8px; }
 .dev-lab-foot-buttons button { font-size: var(--font-ui-smaller); padding: 4px 10px; height: auto; }
 .dev-lab-cmd { display: flex; align-items: center; gap: 8px; padding: 5px 0; border-bottom: 1px solid var(--background-modifier-border); }
 .dev-lab-cmd:last-child { border-bottom: 0; }
 .dev-lab-cmd-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-normal); }
 .dev-lab-kbd { font-family: var(--font-monospace); font-size: var(--font-ui-smaller); color: var(--text-muted); border: 1px solid var(--background-modifier-border); border-radius: var(--radius-s); padding: 0 5px; white-space: nowrap; }
-.dev-lab-chip { display: inline-flex; align-items: center; gap: 5px; margin: 0 6px 6px 0; padding: 3px 9px; height: auto; font-size: var(--font-ui-smaller); border-radius: 999px; }
+.dev-lab-chip { display: inline-flex; align-items: center; gap: 5px; margin: 0 6px 6px 0; padding: 3px 9px; min-height: 24px; height: auto; font-size: var(--font-ui-smaller); border-radius: 999px; }
 .dev-lab-chip .svg-icon { width: 13px; height: 13px; }
 .dev-lab-chip:disabled { opacity: .6; cursor: default; }
+.dev-lab-section-body button { min-height: 24px; }
 .dev-lab-run { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 5px 0; border-bottom: 1px solid var(--background-modifier-border); }
 .dev-lab-run:last-child { border-bottom: 0; }
 .dev-lab-run-name { font-family: var(--font-monospace); font-size: var(--font-ui-smaller); color: var(--text-normal); }
@@ -111,5 +112,5 @@
 .dev-lab-verdict.is-a11y.is-pass { color: var(--color-green); }
 .dev-lab-verdict.is-a11y.is-warn { color: var(--color-orange); }
 .dev-lab-verdict.is-a11y.is-fail { color: var(--color-red); }
-.dev-lab-mini-text { margin-left: auto; padding: 0 8px; height: 20px; font-size: var(--font-ui-smaller); border-radius: var(--radius-s); background: var(--background-modifier-hover); color: var(--text-muted); border: 0; box-shadow: none; }
+.dev-lab-mini-text { margin-left: auto; padding: 0 8px; min-height: 24px; font-size: var(--font-ui-smaller); border-radius: var(--radius-s); background: var(--background-modifier-hover); color: var(--text-muted); border: 0; box-shadow: none; }
 .dev-lab-mini-text:hover { color: var(--text-normal); }

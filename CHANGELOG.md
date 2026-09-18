@@ -2,6 +2,12 @@
 
 All notable changes to Dev Lab are listed here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and versions follow [Semantic Versioning](https://semver.org/).
 
+## [1.1.7] - 2026-09-17
+
+### Fixed
+- Dev Lab's own accessibility audit, run on Dev Lab. Every clickable thing in the panel — the change button, the section refresh buttons, the surface chips, *Write full note*, *Run*, *Open* — was under the 24 × 24 px minimum; all of them clear it now.
+- The finding's file and line used `--text-faint` (3.94:1 dark, 3.07:1 light) and now uses `--text-muted`; the enabled badge and the toolbar labels are mixed toward the body colour so they clear AA in light mode too.
+
 ## [1.1.6] - 2026-09-17
 
 ### Fixed
@@ -78,6 +84,7 @@ All notable changes to Dev Lab are listed here. The format follows [Keep a Chang
 - **UI under every theme**: settings tab, views, ribbon icons, commands (pre-ticked when the code shows they open something without writing) and the current scene, captured under every installed theme × dark/light, tiled one theme per row; theme and scheme restored afterwards.
 - **Panel** with the target plugin, live pre-flight, commands with run buttons, surface chips, and the notes and runs list.
 
+[1.1.7]: https://github.com/Real-Fruit-Snacks/obsidian-plugin-lab/releases/tag/1.1.7
 [1.1.6]: https://github.com/Real-Fruit-Snacks/obsidian-plugin-lab/releases/tag/1.1.6
 [1.1.5]: https://github.com/Real-Fruit-Snacks/obsidian-plugin-lab/releases/tag/1.1.5
 [1.1.4]: https://github.com/Real-Fruit-Snacks/obsidian-plugin-lab/releases/tag/1.1.4
