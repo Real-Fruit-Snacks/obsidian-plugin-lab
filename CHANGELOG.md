@@ -2,6 +2,11 @@
 
 All notable changes to Dev Lab are listed here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and versions follow [Semantic Versioning](https://semver.org/).
 
+## [1.1.8] - 2026-09-17
+
+### Fixed
+- The last three contrast misses in the panel: the command list's "does" tag dropped `--text-faint` for `--text-muted`, and the accessibility verdict row used raw palette colours (2.74:1 in light) instead of the theme's text colours mixed toward the body colour, like the other two verdict rows.
+
 ## [1.1.7] - 2026-09-17
 
 ### Fixed
@@ -84,6 +89,7 @@ All notable changes to Dev Lab are listed here. The format follows [Keep a Chang
 - **UI under every theme**: settings tab, views, ribbon icons, commands (pre-ticked when the code shows they open something without writing) and the current scene, captured under every installed theme × dark/light, tiled one theme per row; theme and scheme restored afterwards.
 - **Panel** with the target plugin, live pre-flight, commands with run buttons, surface chips, and the notes and runs list.
 
+[1.1.8]: https://github.com/Real-Fruit-Snacks/obsidian-plugin-lab/releases/tag/1.1.8
 [1.1.7]: https://github.com/Real-Fruit-Snacks/obsidian-plugin-lab/releases/tag/1.1.7
 [1.1.6]: https://github.com/Real-Fruit-Snacks/obsidian-plugin-lab/releases/tag/1.1.6
 [1.1.5]: https://github.com/Real-Fruit-Snacks/obsidian-plugin-lab/releases/tag/1.1.5
