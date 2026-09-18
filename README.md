@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="docs/assets/cover.png" alt="Dev Lab — ship a plugin that passes review. Three verdicts on one panel." width="100%">
+</p>
+
 # Dev Lab
 
 **Ship a plugin that passes review the first time.** Dev Lab reads an installed plugin's `main.js`, `styles.css` and `manifest.json` and tells you what the community review will say and what the official linter would flag — with the rule id, the file and the line. Then it inventories the plugin's commands, settings and surfaces, and captures its UI under every theme you have installed, in dark and light.
@@ -5,8 +9,6 @@
 [![Site](https://img.shields.io/badge/site-real--fruit--snacks.github.io-3DBE8B)](https://real-fruit-snacks.github.io/obsidian-plugin-lab/)
 [![Release](https://img.shields.io/github/v/release/Real-Fruit-Snacks/obsidian-plugin-lab?color=3DBE8B)](https://github.com/Real-Fruit-Snacks/obsidian-plugin-lab/releases/latest)
 [![License](https://img.shields.io/badge/license-MIT-lightgrey)](LICENSE)
-
-![Dev Lab: the panel reviewing Thoughtbin, its inventory note, and a modal captured under a theme in both schemes](docs/assets/hero.png)
 
 It's the twin of [Theme Lab](https://github.com/Real-Fruit-Snacks/obsidian-theme-lab): the same panel, the same capture engine, aimed at plugin authors instead of theme authors. It was built after a first release failed review over a word in the manifest description.
 
