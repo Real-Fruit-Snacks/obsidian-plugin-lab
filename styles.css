@@ -47,7 +47,7 @@
 .dev-lab-badge { font-size: var(--font-ui-smaller); font-weight: var(--font-medium); padding: 0 7px; border-radius: var(--radius-s); border: 1px solid var(--background-modifier-border); color: var(--text-faint); background: var(--background-secondary-alt); }
 .dev-lab-badge.is-on { color: var(--text-success); border-color: color-mix(in srgb, var(--text-success) 40%, transparent); }
 .dev-lab-tools { display: flex; flex-direction: column; gap: 6px; margin-bottom: var(--size-4-2); }
-.dev-lab-seg { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 2px; padding: 2px; border-radius: var(--radius-m); background: var(--background-secondary-alt); border: 1px solid var(--background-modifier-border); }
+.dev-lab-seg { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 2px; padding: 2px; border-radius: var(--radius-m); background: var(--background-secondary-alt); border: 1px solid var(--background-modifier-border); }
 .dev-lab-panel .dev-lab-seg .dev-lab-tool,
 .dev-lab-panel .dev-lab-seg .dev-lab-tool:is(:hover, :active, :focus, :focus-visible) {
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;

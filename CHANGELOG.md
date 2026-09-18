@@ -2,6 +2,11 @@
 
 All notable changes to Dev Lab are listed here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and versions follow [Semantic Versioning](https://semver.org/).
 
+## [1.1.6] - 2026-09-17
+
+### Fixed
+- The toolbar was laid out for five tools, so the sixth wrapped onto a row of its own. It is two rows of three now, which holds at any sidebar width.
+
 ## [1.1.5] - 2026-09-17
 
 ### Fixed
@@ -73,6 +78,7 @@ All notable changes to Dev Lab are listed here. The format follows [Keep a Chang
 - **UI under every theme**: settings tab, views, ribbon icons, commands (pre-ticked when the code shows they open something without writing) and the current scene, captured under every installed theme × dark/light, tiled one theme per row; theme and scheme restored afterwards.
 - **Panel** with the target plugin, live pre-flight, commands with run buttons, surface chips, and the notes and runs list.
 
+[1.1.6]: https://github.com/Real-Fruit-Snacks/obsidian-plugin-lab/releases/tag/1.1.6
 [1.1.5]: https://github.com/Real-Fruit-Snacks/obsidian-plugin-lab/releases/tag/1.1.5
 [1.1.4]: https://github.com/Real-Fruit-Snacks/obsidian-plugin-lab/releases/tag/1.1.4
 [1.1.3]: https://github.com/Real-Fruit-Snacks/obsidian-plugin-lab/releases/tag/1.1.3
